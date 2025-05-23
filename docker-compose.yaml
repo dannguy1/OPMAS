@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Core Backend Services
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    volumes:
+      - ./core:/app
+      - ./core/logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - OPMAS_CONFIG_PATH=/app/config/opmas_config.yaml
+      - DEBUG=true
+    depends_on:
+      - nats
+      - postgres
+      - redis
+    networks:
+      - opmas_network
+
+  # Management API
+  management_api:
+    build:
+      context: .
+      dockerfile: management_api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - CORS_ORIGINS=["*"]
+      - AUTH_JWT_SECRET=supersecret
+      - AUTH_JWT_ALGORITHM=HS256
+      - AUTH_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - AUTH_REFRESH_TOKEN_EXPIRE_DAYS=7
+    volumes:
+      - ./management_api/src:/app
+    depends_on:
+      - core
+    networks:
+      - opmas_network
+
+  # Frontend UI
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - management_api
+
+  # NATS Message Broker
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"  # HTTP monitoring port
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=opmas
+      - POSTGRES_PASSWORD=opmas
+      - POSTGRES_DB=opmas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  opmas_network:
+    driver: bridge 

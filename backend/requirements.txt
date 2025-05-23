@@ -1,0 +1,35 @@
+# Core Dependencies
+sqlalchemy>=1.4.0
+psycopg2-binary>=2.9.0
+pydantic>=1.8.0
+pyyaml>=6.0
+python-json-logger>=2.0.0
+nats-py>=2.0.0
+redis>=4.0.0
+alembic>=1.12.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio==0.23.5
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Development
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Logging (Consider structured logging libraries later if needed)
+# python-json-logger
+
+# Database (Initial)
+sqlalchemy==2.0.25
+
+# Data Validation (Optional but recommended for JSON formats)
+pydantic==2.6.1
+pydantic-settings==2.1.0
+python-dotenv==1.0.1
+
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0 # Includes standard dependencies like websockets, httptools

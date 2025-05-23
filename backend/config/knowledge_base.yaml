@@ -1,0 +1,84 @@
+# OPMAS Knowledge Base - Device Information and Action Details
+
+# devices: REMOVED - No longer needed as ActionExecutor is removed.
+#   OpenWRT-Test:
+#     ip_address: "192.168.10.13"
+#     ssh_port: 22
+#     ssh_user: "root"
+#     ssh_password: "admin"
+#   OpenWRT-Router1:
+#     ip_address: "192.168.1.1"
+#     ssh_port: 22
+#     ssh_user: "root"
+#     ssh_password: "your_router_password"
+#   TestDevice:
+#     ip_address: "127.0.0.1"
+#     ssh_port: 22
+#     ssh_user: "dannguyen"
+#     ssh_password: "ThaiLoc12"
+
+# --- Action Allowlist (REMOVED) ---
+# No longer needed as ActionExecutor is removed.
+# action_allowlist:
+#   allowed_commands:
+#     - ... (list of commands)
+
+# --- Action Playbooks (Kept for Orchestrator logic) ---
+# Defines sequences of actions for specific findings.
+# Structure: FindingType -> List of Actions
+# Actions have: action_type, command (template used for logging), description, timeout
+# NOTE: The 'command' will only be logged by the Orchestrator, not executed.
+action_playbooks:
+  HighAuthFailures:
+    - action_type: "diagnostic_wifi_stations"
+      command: "iw dev wlan0 station dump"
+      description: "Get list of connected WiFi stations and signal strength."
+      timeout_seconds: 15
+    - action_type: "diagnostic_wifi_logs"
+      command: "logread | grep hostapd"
+      description: "Get recent hostapd logs for authentication details."
+      timeout_seconds: 20
+    # Potential Remediation Action (Example - NOT fully implemented/allowed yet)
+    # - action_type: "remediation_block_mac"
+    #   command_template: "uci add_list wireless.@wifi-iface[0].macfilter='{mac_address}'; wifi reload" # Requires template handling
+    #   description: "Block MAC address associated with excessive auth failures."
+    #   timeout_seconds: 30
+
+  HighSSHAuthFailures:
+    - action_type: "diagnostic_ssh_logs"
+      command: "logread | grep dropbear"
+      description: "Get recent dropbear (SSH server) logs."
+      timeout_seconds: 15
+    # Potential Remediation Action (Example)
+    # - action_type: "remediation_firewall_block_ip"
+    #   command_template: "iptables -I INPUT -s {source_ip} -j DROP" # Requires template handling
+    #   description: "Block source IP address associated with excessive SSH failures."
+    #   timeout_seconds: 15
+
+  OOMKillerInvoked:
+    - action_type: "diagnostic_oom_logs"
+      command: "dmesg | grep -i -E 'oom|kill|error|warning'"
+      description: "Get recent kernel logs related to OOM killer or errors."
+      timeout_seconds: 20
+    - action_type: "diagnostic_memory_usage"
+      command: "free -h"
+      description: "Get current memory usage."
+      timeout_seconds: 10
+    - action_type: "diagnostic_disk_usage"
+      command: "df -h"
+      description: "Get current disk usage."
+      timeout_seconds: 10
+
+  InterfaceFlapping:
+    - action_type: "LogFlappingInfo" # Note: This was a custom action type
+      command: "echo 'OPMAS detected interface flapping for {{ finding.details.interface }} on {{ finding.device_hostname or finding.device_ip }}. Count: {{ finding.details.event_count }} in {{ finding.details.time_window_seconds }}s. Finding ID: {{ finding.finding_id }}'"
+      description: "Log details about the interface flapping."
+      timeout_seconds: 5 # Timeout is less relevant now
+
+  HighAuthFailureRate: # Added playbook
+    - action_type: "LogHighAuthFailure"
+      command: "echo 'OPMAS detected high auth failure rate for client {{ finding.details.client_mac }} on {{ finding.device_hostname or finding.device_ip }}{% if finding.details.interface %} interface {{ finding.details.interface }}{% endif %}. Count: {{ finding.details.failure_count }} in {{ finding.details.time_window_seconds }}s. Finding ID: {{ finding.finding_id }}'"
+      description: "Log details about the high auth failure rate."
+      timeout_seconds: 5 # Timeout is less relevant now
+
+# Add other playbooks here... 

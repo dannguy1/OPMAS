@@ -1,0 +1,88 @@
+# OPMAS Core Configuration
+
+# NATS Configuration
+nats:
+  url: "nats://localhost:4222"
+  max_reconnect_attempts: 10
+  reconnect_time_wait: 2  # seconds
+
+# Database Configuration
+database:
+  url: "postgresql://opmas:opmas@localhost:5432/opmas"
+  pool_size: 5
+  max_overflow: 10
+  echo: false
+
+# Log API Configuration
+log_api:
+  host: "0.0.0.0"
+  port: 8080
+  workers: 4
+  batch_size: 100
+  batch_timeout: 1  # seconds
+
+# Agent Configuration
+agents:
+  wifi:
+    enabled: true
+    batch_size: 50
+    processing_interval: 1  # seconds
+  security:
+    enabled: true
+    batch_size: 50
+    processing_interval: 1
+  health:
+    enabled: true
+    batch_size: 50
+    processing_interval: 1
+  connectivity:
+    enabled: true
+    batch_size: 50
+    processing_interval: 1
+
+# Action Executor Configuration
+action_executor:
+  max_concurrent_actions: 10
+  action_timeout: 30  # seconds
+  retry_attempts: 3
+  retry_delay: 5  # seconds
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  output: "logs/opmas.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Knowledge Base Configuration
+knowledge_base:
+  # Paths are relative to the project root
+  # database_path: data/opmas_kb.db
+  device_info_path: "config/knowledge_base.yaml"
+  agent_rules_path: "config/agent_rules.yaml"
+  playbooks_path: "config/orchestrator_playbooks.yaml"
+  action_allowlist_path: "config/action_allowlist.yaml"
+
+# Log Ingestor Configuration
+log_ingestor:
+  listen_address: '0.0.0.0' # IP address to bind to (0.0.0.0 for all interfaces)
+  udp_port: 1514            # Changed from 514 to avoid root
+  # tcp_port: 1514            # Default TCP port (If TCP listener is added later)
+
+# --- Database Configuration (PostgreSQL) ---
+database:
+  db_type: "postgresql" # Indicator for DB type
+  host: "localhost"       # Replace with your PostgreSQL host
+  port: 5432              # Default PostgreSQL port
+  username: "opmas_user"  # Replace with your DB username
+  password: "opmas_password" # <<< REPLACE WITH STRONG PASSWORD >>>
+  database: "opmas_db"      # Replace with your DB name
+  # Optional: Add connection arguments if needed, e.g., SSL settings
+  # connect_args: 
+  #   sslmode: "require"
+
+# action_executor:
+#   ssh_timeout_seconds: 30   # Default timeout for SSH command execution
+
+# Add other component-specific configs here as needed

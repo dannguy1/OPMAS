@@ -1,0 +1,25 @@
+{
+  "logs": [
+    {
+      "timestamp": "2024-03-20T10:00:00Z",
+      "device_id": 1,
+      "severity": "ERROR",
+      "message": "Interface GigabitEthernet0/0/0 is down",
+      "source": "system"
+    },
+    {
+      "timestamp": "2024-03-20T10:01:00Z",
+      "device_id": 1,
+      "severity": "INFO",
+      "message": "Interface GigabitEthernet0/0/0 is up",
+      "source": "system"
+    },
+    {
+      "timestamp": "2024-03-20T10:02:00Z",
+      "device_id": 2,
+      "severity": "WARNING",
+      "message": "High CPU utilization detected",
+      "source": "performance"
+    }
+  ]
+} 

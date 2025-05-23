@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'core'
+    static_configs:
+      - targets: ['core:8000']
+
+  - job_name: 'management_api'
+    static_configs:
+      - targets: ['management_api:8000']
+
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222'] 

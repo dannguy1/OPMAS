@@ -1,0 +1,11 @@
+# Ignore checkpoint data
+.cursor/checkpoints/*.json
+!initial.json
+
+# Ignore logs
+.cursor/logs/*.log
+!implementation.log
+
+# Ignore temporary files
+*.tmp
+*.temp

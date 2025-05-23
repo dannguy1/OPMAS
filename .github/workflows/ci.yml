@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          cd core
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 black
+      - name: Lint
+        run: |
+          cd core
+          flake8 src tests
+          black --check src tests
+      - name: Test
+        run: |
+          cd core
+          pytest --cov=src tests/
+
+  test-management-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      - name: Install dependencies
+        run: |
+          cd management_api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 black
+      - name: Lint
+        run: |
+          cd management_api
+          flake8 src tests
+          black --check src tests
+      - name: Test
+        run: |
+          cd management_api
+          pytest --cov=src tests/
+
+  test-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: |
+          cd ui
+          npm ci
+      - name: Lint
+        run: |
+          cd ui
+          npm run lint
+      - name: Test
+        run: |
+          cd ui
+          npm run test 

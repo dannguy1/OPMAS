@@ -1,0 +1,54 @@
+# OPMAS Agent Rules Configuration
+
+# WAN Connectivity Agent Rules
+interface_flapping:
+  agent: WANConnectivityAgent
+  description: "Detect interface flapping (rapid up/down transitions)"
+  conditions:
+    - field: "message"
+      pattern: "(interface .* (up|down))"
+  window_seconds: 300  # 5 minutes
+  threshold: 3  # Number of transitions to consider flapping
+  severity: "warning"
+
+dhcp_failure:
+  agent: WANConnectivityAgent
+  description: "Detect DHCP lease failures"
+  conditions:
+    - field: "message"
+      pattern: "(DHCP.*failed|no lease)"
+  severity: "error"
+
+# Device Health Agent Rules
+high_cpu_usage:
+  agent: DeviceHealthAgent
+  description: "Detect high CPU usage"
+  conditions:
+    - field: "cpu_usage"
+      threshold: 90
+  severity: "warning"
+
+high_memory_usage:
+  agent: DeviceHealthAgent
+  description: "Detect high memory usage"
+  conditions:
+    - field: "memory_usage"
+      threshold: 85
+  severity: "warning"
+
+# Network Security Agent Rules
+port_scan_attempt:
+  agent: NetworkSecurityAgent
+  description: "Detect potential port scan attempts"
+  conditions:
+    - field: "message"
+      pattern: "(port scan|multiple connection attempts)"
+  severity: "warning"
+
+unauthorized_access:
+  agent: NetworkSecurityAgent
+  description: "Detect unauthorized access attempts"
+  conditions:
+    - field: "message"
+      pattern: "(unauthorized|authentication failed|invalid credentials)"
+  severity: "error" 

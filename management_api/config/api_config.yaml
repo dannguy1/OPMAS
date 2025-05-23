@@ -1,0 +1,59 @@
+# OPMAS Management API Configuration
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  timeout: 60  # seconds
+
+# Database Configuration
+database:
+  url: "postgresql://opmas:opmas@localhost:5432/opmas"
+  pool_size: 5
+  max_overflow: 10
+  echo: false
+
+# Authentication Configuration
+auth:
+  jwt_secret: "your-secret-key"  # Change in production
+  jwt_algorithm: "HS256"
+  access_token_expire_minutes: 30
+  refresh_token_expire_days: 7
+
+# CORS Configuration
+cors:
+  allowed_origins:
+    - "http://localhost:3000"  # Frontend development
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Authorization"
+    - "Content-Type"
+  allow_credentials: true
+
+# Rate Limiting
+rate_limit:
+  enabled: true
+  requests_per_minute: 60
+  burst_size: 10
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  output: "logs/api.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# API Documentation
+docs:
+  title: "OPMAS Management API"
+  description: "API for managing the OpenWRT Proactive Monitoring Agentic System"
+  version: "1.0.0"
+  docs_url: "/docs"
+  redoc_url: "/redoc"

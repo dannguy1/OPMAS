@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": 1,
+      "name": "interface_down_alert",
+      "description": "Alert when interface goes down",
+      "condition": {
+        "field": "message",
+        "operator": "contains",
+        "value": "is down"
+      },
+      "action": {
+        "type": "alert",
+        "severity": "high",
+        "message": "Interface down detected"
+      }
+    },
+    {
+      "id": 2,
+      "name": "high_cpu_alert",
+      "description": "Alert when CPU utilization is high",
+      "condition": {
+        "field": "message",
+        "operator": "contains",
+        "value": "High CPU utilization"
+      },
+      "action": {
+        "type": "alert",
+        "severity": "medium",
+        "message": "High CPU utilization detected"
+      }
+    }
+  ]
+} 

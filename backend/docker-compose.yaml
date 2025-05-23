@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222" # NATS client port
+      - "8222:8222" # NATS monitoring port (optional)
+    # Optional: Add command args if needed, e.g., for clustering or config file
+    # command: "-c /etc/nats-server/nats-server.conf"
+    # volumes:
+    #   - ./config/nats-server.conf:/etc/nats-server/nats-server.conf # Example config mount
+    restart: unless-stopped # Optional: Restart NATS if it stops unexpectedly
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: opmas_user # Use the same user as in opmas_config.yaml
+      POSTGRES_PASSWORD: opmas_password # <<< REPLACE WITH YOUR STRONG PASSWORD >>>
+      POSTGRES_DB: opmas_db # Use the same DB name as in opmas_config.yaml
+    ports:
+      - "127.0.0.1:5432:5432" # Bind PostgreSQL port only to localhost for security
+    volumes:
+      - opmas_pgdata:/var/lib/postgresql/data # Persist data using a named volume
+    restart: unless-stopped # Optional: Restart Postgres if it stops unexpectedly
+
+volumes:
+  opmas_pgdata: # Define the named volume for PostgreSQL data persistence 

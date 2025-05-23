@@ -1,0 +1,54 @@
+# Allowlist of commands the Action Executor is permitted to run.
+# This is a critical security measure.
+# Each entry should ideally be the exact command string or a safe pattern.
+# Using templates/patterns requires careful validation in the executor.
+
+# For v1.0, focus on diagnostic, read-only commands.
+
+allowed_commands:
+  # --- General Diagnostics ---
+  - "logread -l 50" # Get recent logs (example, adjust limit)
+  - "logread -l 100"
+  - "dmesg | tail -n 50"
+  - "uptime"
+  - "free"
+  - "cat /proc/meminfo"
+  - "df -h"
+  - "top -b -n 1" # Non-interactive top
+  - "ps w" # Process list
+
+  # --- Networking Diagnostics ---
+  - "ifconfig"
+  - "ip addr show"
+  - "ip route show"
+  - "netstat -tulnp" # Listening ports
+  - "cat /etc/config/network"
+  - "cat /etc/config/dhcp"
+  - "ping -c 3 {target}" # Example template - NEEDs careful validation
+  - "traceroute -n {target}" # Example template - NEEDs careful validation
+  - "nslookup {domain}" # Example template - NEEDs careful validation
+
+  # --- WiFi Diagnostics ---
+  - "iw dev"
+  - "iwinfo"
+  - "cat /etc/config/wireless"
+  - "hostapd_cli -i {interface} list_sta" # Example template
+  - "hostapd_cli -i {interface} get_sta {mac_address}" # Example template
+
+  # --- Firewall Diagnostics ---
+  - "iptables -L -n -v"
+  - "iptables -L INPUT -n | grep {ip_address}" # Example template
+  - "cat /etc/config/firewall"
+
+  # --- Potential Low-Impact Actions (Use with extreme caution) ---
+  # - "sync && echo 3 > /proc/sys/vm/drop_caches" # Clear caches (Included in playbook example)
+  # - "/etc/init.d/network restart" # Network restart (Potentially disruptive)
+  # - "/etc/init.d/firewall restart"
+  # - "wifi reload"
+
+# IMPORTANT: Commands with placeholders (like {target}, {interface}) MUST be
+# validated and sanitized by the Action Executor before execution.
+# The allowlist should ideally match the EXACT command after substitution,
+# or use a very strict regex pattern if templating is allowed.
+# For maximum security, avoid templating in the allowlist itself initially
+# and list every exact allowed command variation. 

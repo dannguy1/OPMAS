@@ -1,0 +1,20 @@
+development:
+  host: localhost
+  port: 5432
+  name: opmas_dev
+  user: opmas_dev
+  password: opmas_dev_pass
+
+test:
+  host: localhost
+  port: 5432
+  name: opmas_test
+  user: opmas_test
+  password: opmas_test_pass
+
+production:
+  host: localhost
+  port: 5432
+  name: opmas_prod
+  user: opmas_prod
+  password: opmas_prod_pass 

@@ -1,0 +1,28 @@
+database:
+  host: localhost
+  port: 5432
+  name: opmas_test
+  user: opmas_test
+  password: opmas_test_pass
+
+nats:
+  host: localhost
+  port: 4222
+
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+
+logging:
+  level: DEBUG
+  format: json
+  rotation: 1 day
+  retention: 7 days
+
+test:
+  timeout: 30
+  retry_attempts: 3
+  cleanup: true
+  parallel: true
+  max_workers: 4 
