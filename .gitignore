@@ -39,7 +39,6 @@ logs/
 
 # Database
 *.db
-*.sqlite3
 
 # Testing
 .coverage
@@ -85,4 +84,14 @@ out/
 Thumbs.db
 *.bak
 *.tmp
-*.temp 
+*.temp
+
+# Project specific
+management_api/logs/
+management_api/venv/
+frontend/node_modules/
+frontend/.next/
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
+frontend/build/ 
