@@ -36,4 +36,7 @@ black>=23.9.0
 isort>=5.12.0
 flake8>=6.1.0
 mypy>=1.5.1
-pre-commit>=3.4.0 
+pre-commit>=3.4.0
+
+# Added from the code block
+aiohttp==3.9.1 

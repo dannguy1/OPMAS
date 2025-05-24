@@ -1,16 +1,41 @@
+"""JWT authentication handler."""
+
+import jwt
 from datetime import datetime, timedelta
-from typing import Optional
-from jose import JWTError, jwt
+from typing import Optional, Dict, Any
+from opmas_mgmt_api.config import settings
 from passlib.context import CryptContext
 from .schemas import TokenData
 
 class AuthHandler:
-    def __init__(self, config: dict):
-        self.secret_key = config["auth"]["jwt_secret"]
-        self.algorithm = config["auth"]["jwt_algorithm"]
-        self.access_token_expire_minutes = config["auth"]["access_token_expire_minutes"]
-        self.refresh_token_expire_days = config["auth"]["refresh_token_expire_days"]
+    """JWT authentication handler."""
+
+    def __init__(self):
+        """Initialize the auth handler."""
+        self.secret_key = settings.SECRET_KEY
+        self.algorithm = settings.ALGORITHM
+        self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        self.refresh_token_expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    def encode_token(self, user_id: int) -> str:
+        """Encode a JWT token."""
+        payload = {
+            "exp": datetime.utcnow() + timedelta(days=0, minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            "iat": datetime.utcnow(),
+            "sub": str(user_id)
+        }
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+
+    def decode_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Decode a JWT token."""
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            return payload
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
 
     def create_access_token(self, data: dict) -> str:
         to_encode = data.copy()
@@ -37,5 +62,7 @@ class AuthHandler:
             if username is None:
                 return None
             return TokenData(username=username)
-        except JWTError:
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
             return None 
