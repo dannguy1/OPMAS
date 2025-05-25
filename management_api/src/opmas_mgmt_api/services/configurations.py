@@ -39,7 +39,9 @@ class ConfigurationService:
             query = query.where(Configuration.is_active == is_active)
 
         # Get total count
-        total = len(await self.db.execute(query))
+        count_query = select(Configuration.id).select_from(query.subquery())
+        result = await self.db.execute(count_query)
+        total = len(result.scalars().all())
 
         # Apply pagination
         query = query.offset(skip).limit(limit)

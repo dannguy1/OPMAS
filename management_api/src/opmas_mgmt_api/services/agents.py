@@ -10,22 +10,25 @@ from sqlalchemy.exc import IntegrityError
 from opmas_mgmt_api.models.agents import Agent
 from opmas_mgmt_api.schemas.agents import AgentCreate, AgentUpdate, AgentStatus
 from opmas_mgmt_api.core.exceptions import OPMASException
-from opmas_mgmt_api.services.nats import nats_manager
+from opmas_mgmt_api.services.nats import nats_manager, NATSManager
 
 class AgentService:
     """Agent management service."""
     
-    def __init__(self, db: Session):
-        """Initialize service with database session."""
+    def __init__(self, db: Session, nats: NATSManager):
+        """Initialize service with database session and NATS manager."""
         self.db = db
+        self.nats = nats
         
     async def list_agents(
         self,
         skip: int = 0,
         limit: int = 100,
         agent_type: Optional[str] = None,
-        status: Optional[str] = None
-    ) -> Tuple[List[Agent], int]:
+        status: Optional[str] = None,
+        enabled: Optional[bool] = None,
+        device_id: Optional[UUID] = None
+    ) -> Dict[str, Any]:
         """List agents with pagination and filtering."""
         query = select(Agent)
         
@@ -33,14 +36,27 @@ class AgentService:
             query = query.where(Agent.agent_type == agent_type)
         if status:
             query = query.where(Agent.status == status)
+        if enabled is not None:
+            query = query.where(Agent.enabled == enabled)
+        if device_id:
+            query = query.where(Agent.device_id == device_id)
             
-        total = len(await self.db.execute(query))
-        query = query.offset(skip).limit(limit)
+        # Get total count
+        count_query = select(Agent.id).select_from(query.subquery())
+        result = await self.db.execute(count_query)
+        total = len(result.scalars().all())
         
+        # Apply pagination
+        query = query.offset(skip).limit(limit)
         result = await self.db.execute(query)
         agents = result.scalars().all()
         
-        return agents, total
+        return {
+            "items": agents,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
         
     async def create_agent(self, agent: AgentCreate) -> Agent:
         """Create a new agent."""
@@ -57,7 +73,7 @@ class AgentService:
             await self.db.refresh(db_agent)
             
             # Publish agent creation event
-            await nats_manager.publish(
+            await self.nats.publish(
                 "agent.created",
                 {
                     "agent_id": str(db_agent.id),
@@ -103,7 +119,7 @@ class AgentService:
             
             if updated_agent:
                 # Publish agent update event
-                await nats_manager.publish(
+                await self.nats.publish(
                     "agent.updated",
                     {
                         "agent_id": str(agent_id),
@@ -128,7 +144,7 @@ class AgentService:
         
         if result.rowcount > 0:
             # Publish agent deletion event
-            await nats_manager.publish(
+            await self.nats.publish(
                 "agent.deleted",
                 {
                     "agent_id": str(agent_id),
@@ -178,7 +194,7 @@ class AgentService:
             return None
             
         # Publish status update event
-        await nats_manager.publish(
+        await self.nats.publish(
             f"agent.status.{agent_id}",
             {
                 "agent_id": str(agent_id),
@@ -199,7 +215,7 @@ class AgentService:
     async def discover_agents(self) -> List[Dict[str, Any]]:
         """Discover available agents."""
         # Publish discovery request
-        await nats_manager.publish(
+        await self.nats.publish(
             "agent.discovery",
             {
                 "timestamp": datetime.utcnow().isoformat()

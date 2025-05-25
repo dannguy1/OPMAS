@@ -1,6 +1,6 @@
 """JWT authentication handler."""
 
-import jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from opmas_mgmt_api.config import settings
@@ -10,18 +10,26 @@ from .schemas import TokenData
 class AuthHandler:
     """JWT authentication handler."""
 
-    def __init__(self):
-        """Initialize the auth handler."""
-        self.secret_key = settings.SECRET_KEY
-        self.algorithm = settings.ALGORITHM
-        self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        self.refresh_token_expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
+    def __init__(self, settings_dict: Optional[Dict[str, Any]] = None):
+        """Initialize the auth handler.
+        
+        Args:
+            settings_dict: Optional dictionary of settings. If not provided,
+                          uses the global settings instance.
+        """
+        if settings_dict is None:
+            settings_dict = settings.dict()
+            
+        self.secret_key = settings_dict["SECRET_KEY"]
+        self.algorithm = settings_dict["ALGORITHM"]
+        self.access_token_expire_minutes = settings_dict["ACCESS_TOKEN_EXPIRE_MINUTES"]
+        self.refresh_token_expire_days = settings_dict["REFRESH_TOKEN_EXPIRE_DAYS"]
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def encode_token(self, user_id: int) -> str:
         """Encode a JWT token."""
         payload = {
-            "exp": datetime.utcnow() + timedelta(days=0, minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            "exp": datetime.utcnow() + timedelta(days=0, minutes=self.access_token_expire_minutes),
             "iat": datetime.utcnow(),
             "sub": str(user_id)
         }
@@ -32,9 +40,7 @@ class AuthHandler:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
-        except jwt.ExpiredSignatureError:
-            return None
-        except jwt.InvalidTokenError:
+        except JWTError:
             return None
 
     def create_access_token(self, data: dict) -> str:
@@ -62,7 +68,5 @@ class AuthHandler:
             if username is None:
                 return None
             return TokenData(username=username)
-        except jwt.ExpiredSignatureError:
-            return None
-        except jwt.InvalidTokenError:
+        except JWTError:
             return None 

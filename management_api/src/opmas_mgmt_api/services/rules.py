@@ -35,9 +35,13 @@ class RuleService:
         if enabled is not None:
             query = query.where(Rule.enabled == enabled)
             
-        total = await self.db.scalar(select(Rule).where(query.whereclause))
-        query = query.offset(skip).limit(limit)
+        # Get total count
+        count_query = select(Rule.id).select_from(query.subquery())
+        result = await self.db.execute(count_query)
+        total = len(result.scalars().all())
         
+        # Apply pagination
+        query = query.offset(skip).limit(limit)
         result = await self.db.execute(query)
         rules = result.scalars().all()
         
