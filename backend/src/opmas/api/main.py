@@ -12,6 +12,7 @@ import logging
 from ..db_utils import get_db_session
 from ..db_models import Agent, AgentRule, Finding
 from ..data_models import AgentStatus, FindingSeverity
+from ..core.database import DatabaseManager
 from .schemas import (
     AgentCreate,
     AgentUpdate,
@@ -41,6 +42,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Startup event
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup."""
+    logger.info("Initializing database tables...")
+    try:
+        db_manager = DatabaseManager()
+        db_manager.init_db()
+        logger.info("Database tables initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database tables: {e}")
+        raise
 
 # --- Agent Endpoints ---
 
