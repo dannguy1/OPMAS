@@ -1,60 +1,86 @@
 """Device management service."""
 
-from datetime import datetime
-from typing import List, Optional, Tuple, Dict, Any
-from uuid import UUID
-from sqlalchemy.orm import Session
-from sqlalchemy import select, update, delete
-from sqlalchemy.exc import IntegrityError
 import asyncio
-import aiohttp
 import ipaddress
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 
-from opmas_mgmt_api.models.devices import Device
-from opmas_mgmt_api.schemas.devices import DeviceCreate, DeviceUpdate, DeviceStatus, DeviceDiscovery
+import aiohttp
 from opmas_mgmt_api.core.exceptions import OPMASException
 from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.models.devices import Device
+from opmas_mgmt_api.schemas.devices import (
+    DeviceCreate,
+    DeviceDiscovery,
+    DeviceList,
+    DeviceStatus,
+    DeviceUpdate,
+)
+from sqlalchemy import delete, select, update, func
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 
 class DeviceService:
     """Device management service."""
-    
+
     def __init__(self, db: Session, nats: NATSManager):
         """Initialize service with database session and NATS manager."""
         self.db = db
         self.nats = nats
-        
+
     async def list_devices(
         self,
         skip: int = 0,
         limit: int = 100,
         device_type: Optional[str] = None,
-        status: Optional[str] = None
-    ) -> Tuple[List[Device], int]:
+        status: Optional[str] = None,
+        enabled: Optional[bool] = None,
+    ) -> DeviceList:
         """List devices with pagination and filtering."""
+        # Build base query
         query = select(Device)
-        
+        count_query = select(func.count()).select_from(Device)
+
+        # Apply filters
         if device_type:
             query = query.where(Device.device_type == device_type)
+            count_query = count_query.where(Device.device_type == device_type)
         if status:
             query = query.where(Device.status == status)
-            
-        total = len(await self.db.execute(query))
+            count_query = count_query.where(Device.status == status)
+        if enabled is not None:
+            query = query.where(Device.enabled == enabled)
+            count_query = count_query.where(Device.enabled == enabled)
+
+        # Get total count
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar_one()
+
+        # Apply pagination
         query = query.offset(skip).limit(limit)
-        
+
+        # Get paginated results
         result = await self.db.execute(query)
         devices = result.scalars().all()
-        
-        return devices, total
-        
+
+        return DeviceList(
+            items=devices,
+            total=total,
+            skip=skip,
+            limit=limit
+        )
+
     async def create_device(self, device: DeviceCreate) -> Device:
         """Create a new device."""
         db_device = Device(
             **device.model_dump(),
             status="inactive",
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
         )
-        
+
         try:
             self.db.add(db_device)
             await self.db.commit()
@@ -66,17 +92,15 @@ class DeviceService:
                 status_code=400,
                 detail=f"Device creation failed: {str(e)}"
             )
-            
+
     async def get_device(self, device_id: UUID) -> Optional[Device]:
         """Get device by ID."""
         query = select(Device).where(Device.id == device_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
-        
+
     async def update_device(
-        self,
-        device_id: UUID,
-        device: DeviceUpdate
+        self, device_id: UUID, device: DeviceUpdate
     ) -> Optional[Device]:
         """Update device details."""
         query = (
@@ -88,7 +112,7 @@ class DeviceService:
             )
             .returning(Device)
         )
-        
+
         try:
             result = await self.db.execute(query)
             await self.db.commit()
@@ -99,30 +123,28 @@ class DeviceService:
                 status_code=400,
                 detail=f"Device update failed: {str(e)}"
             )
-            
+
     async def delete_device(self, device_id: UUID) -> bool:
         """Delete a device."""
         query = delete(Device).where(Device.id == device_id)
         result = await self.db.execute(query)
         await self.db.commit()
-        return result.rowcount > 0
-        
+        return bool(result.rowcount > 0)
+
     async def get_device_status(self, device_id: UUID) -> Optional[DeviceStatus]:
         """Get device status."""
         device = await self.get_device(device_id)
         if not device:
             return None
-            
+
         return DeviceStatus(
             status=device.status,
             timestamp=device.updated_at,
-            details={"last_seen": device.updated_at.isoformat()}
+            details={"last_seen": device.updated_at.isoformat()},
         )
-        
+
     async def update_device_status(
-        self,
-        device_id: UUID,
-        status: DeviceStatus
+        self, device_id: UUID, status: DeviceStatus
     ) -> Optional[DeviceStatus]:
         """Update device status."""
         query = (
@@ -134,14 +156,14 @@ class DeviceService:
             )
             .returning(Device)
         )
-        
+
         result = await self.db.execute(query)
         await self.db.commit()
-        
+
         device = result.scalar_one_or_none()
         if not device:
             return None
-            
+
         return DeviceStatus(
             status=device.status,
             timestamp=device.updated_at,
@@ -156,7 +178,7 @@ class DeviceService:
     ) -> List[DeviceDiscovery]:
         """Discover devices on the network."""
         try:
-            network = ipaddress.ip_network(network)
+            network_obj = ipaddress.ip_network(network)
         except ValueError as e:
             raise OPMASException(
                 status_code=400,
@@ -181,14 +203,14 @@ class DeviceService:
                                 "device_type": data.get("device_type", "unknown"),
                                 "model": data.get("model"),
                                 "firmware_version": data.get("firmware_version"),
-                                "status": "available"
+                                "status": "available",
                             }
             except (aiohttp.ClientError, asyncio.TimeoutError):
                 pass
             return None
 
         # Create tasks for each IP in the network
-        for ip in network.hosts():
+        for ip in network_obj.hosts():
             tasks.append(check_device(str(ip)))
 
         # Run all tasks concurrently
@@ -205,8 +227,8 @@ class DeviceService:
             {
                 "network": str(network),
                 "count": len(discovered_devices),
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
         return discovered_devices
@@ -215,10 +237,7 @@ class DeviceService:
         """Get device metrics."""
         device = await self.get_device(device_id)
         if not device:
-            raise OPMASException(
-                status_code=404,
-                detail="Device not found"
-            )
+            raise OPMASException(status_code=404, detail="Device not found")
 
         # Request metrics from device
         try:
@@ -232,7 +251,7 @@ class DeviceService:
                         return {
                             "device_id": str(device_id),
                             "timestamp": datetime.utcnow().isoformat(),
-                            "metrics": metrics
+                            "metrics": metrics,
                         }
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             raise OPMASException(
@@ -241,17 +260,12 @@ class DeviceService:
             )
 
     async def update_device_configuration(
-        self,
-        device_id: UUID,
-        configuration: Dict[str, Any]
+        self, device_id: UUID, configuration: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Update device configuration."""
         device = await self.get_device(device_id)
         if not device:
-            raise OPMASException(
-                status_code=404,
-                detail="Device not found"
-            )
+            raise OPMASException(status_code=404, detail="Device not found")
 
         # Send configuration to device
         try:
@@ -263,13 +277,15 @@ class DeviceService:
                 ) as response:
                     if response.status == 200:
                         result = await response.json()
-                        
+
                         # Update device in database
                         await self.update_device(
                             device_id,
                             DeviceUpdate(
-                                metadata={"last_config_update": datetime.utcnow().isoformat()}
-                            )
+                                metadata={
+                                    "last_config_update": datetime.utcnow().isoformat()
+                                }
+                            ),
                         )
 
                         # Publish configuration update event
@@ -277,8 +293,8 @@ class DeviceService:
                             "device.config.updated",
                             {
                                 "device_id": str(device_id),
-                                "timestamp": datetime.utcnow().isoformat()
-                            }
+                                "timestamp": datetime.utcnow().isoformat(),
+                            },
                         )
 
                         return result
@@ -291,4 +307,4 @@ class DeviceService:
             raise OPMASException(
                 status_code=503,
                 detail=f"Failed to update device configuration: {str(e)}"
-            ) 
+            )
