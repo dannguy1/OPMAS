@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from opmas_mgmt_api.core.exceptions import OPMASException
+from opmas_mgmt_api.core.nats import NATSManager, nats_manager
 from opmas_mgmt_api.models.agents import Agent
 from opmas_mgmt_api.schemas.agents import AgentCreate, AgentStatus, AgentUpdate
-from opmas_mgmt_api.services.nats import NATSService, nats_manager
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 class AgentService:
     """Agent management service."""
 
-    def __init__(self, db: Session, nats: Optional[NATSService] = None):
+    def __init__(self, db: Session, nats: Optional[NATSManager] = None):
         """Initialize service with database session and NATS manager."""
         self.db = db
         self._nats = nats or nats_manager

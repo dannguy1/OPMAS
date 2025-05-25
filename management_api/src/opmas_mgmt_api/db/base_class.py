@@ -1,9 +1,7 @@
-"""Base class for SQLAlchemy models."""
+"""SQLAlchemy declarative base class."""
 
-from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Column, DateTime
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 
@@ -17,9 +15,9 @@ class Base:
     # Generate __tablename__ automatically
     @declared_attr
     def __tablename__(cls) -> str:
-        """Generate table name from class name."""
-        return cls.__name__.lower()
+        """Generate table name from class name.
 
-    # Add created_at and updated_at columns to all models
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+        Returns:
+            str: Table name
+        """
+        return cls.__name__.lower()

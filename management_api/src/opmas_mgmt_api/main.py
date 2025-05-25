@@ -1,4 +1,4 @@
-"""Main application module."""
+"""Main FastAPI application."""
 
 import logging
 import time
@@ -7,23 +7,39 @@ from typing import Any, Callable
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from opmas_mgmt_api.api.v1.api import api_router
+from opmas_mgmt_api.api.v1.endpoints import (
+    actions,
+    agents,
+    auth,
+    dashboard,
+    devices,
+    findings,
+    rules,
+    websocket,
+)
 from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.db.init_db import init_db
 from opmas_mgmt_api.services.websocket import WebSocketManager
-from opmas_mgmt_api.db.session import init_db
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="OPMAS Management API",
+    description="API for managing OPMAS devices, agents, and rules",
+    version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Set up CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=["http://192.168.10.8:3000"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,19 +61,25 @@ async def add_process_time_header(
         Response with processing time header
     """
     start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+    except Exception as e:
+        logger.error(f"Error processing request: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
 
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    """Initialize services on startup."""
+    """Initialize application on startup."""
     try:
-        # Initialize database
         await init_db()
-        logger.info("Database initialized")
+        logger.info("Application startup complete")
 
         # Initialize NATS connection
         nats_manager = NATSManager()
@@ -104,5 +126,18 @@ async def health_check() -> JSONResponse:
     )
 
 
-# Include API router
-app.include_router(api_router, prefix=settings.API_V1_STR)
+# Include routers
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(devices.router, prefix="/api/v1", tags=["devices"])
+app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
+app.include_router(rules.router, prefix="/api/v1", tags=["rules"])
+app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
+app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
+app.include_router(findings.router, prefix="", tags=["findings"])
+app.include_router(actions.router, prefix="", tags=["actions"])
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "Welcome to OPMAS Management API"}

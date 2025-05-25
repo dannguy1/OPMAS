@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from opmas_mgmt_api.core.exceptions import OPMASException
@@ -92,6 +92,65 @@ class LogService:
             logger.error(f"Log processing failed: {e}", exc_info=True)
             raise OPMASException(f"Failed to process logs: {str(e)}")
 
+    async def get_statistics(self) -> Dict[str, Any]:
+        """Get log statistics."""
+        try:
+            # Get total logs count
+            total_logs = await self.db.scalar(select(func.count()).select_from(LogEntry)) or 0
+
+            # Get logs by severity in last 24 hours
+            last_24h = datetime.utcnow() - timedelta(hours=24)
+            severity_counts = await self.db.execute(
+                select(LogEntry.level, func.count())
+                .select_from(LogEntry)
+                .where(LogEntry.timestamp >= last_24h)
+                .group_by(LogEntry.level)
+            )
+            severity_stats = {row[0]: row[1] for row in severity_counts}
+
+            return {
+                "total_logs": total_logs,
+                "last_24h": {
+                    "error": severity_stats.get("error", 0),
+                    "warning": severity_stats.get("warning", 0),
+                    "info": severity_stats.get("info", 0),
+                    "debug": severity_stats.get("debug", 0),
+                },
+            }
+        except Exception as e:
+            logger.error(f"Error getting log statistics: {e}")
+            return {"total_logs": 0, "last_24h": {}}
+
+    async def get_recent_logs(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent log entries."""
+        try:
+            # Query recent logs
+            query = select(LogEntry).order_by(LogEntry.timestamp.desc()).limit(limit)
+            result = await self.db.execute(query)
+            logs = result.scalars().all()
+
+            if not logs:
+                return []
+
+            return [
+                {
+                    "id": log.id,
+                    "timestamp": log.timestamp.isoformat(),
+                    "level": log.level,
+                    "facility": log.facility,
+                    "message": log.message,
+                    "source": {
+                        "id": log.source.id,
+                        "identifier": log.source.identifier,
+                        "ip_address": log.source.ip_address,
+                    },
+                }
+                for log in logs
+            ]
+        except Exception as e:
+            logger.error(f"Error getting recent logs: {e}")
+            return []
+
     async def _get_or_create_source(
         self, identifier: Optional[str], ip_address: Optional[str]
     ) -> LogSource:
@@ -102,28 +161,26 @@ class LogService:
             ip_address: Source IP address
 
         Returns:
-            LogSource: Log source instance
+            LogSource: Log source
         """
+        if not identifier:
+            identifier = "unknown"
+
         # Try to find existing source
-        if identifier:
-            stmt = select(LogSource).where(LogSource.identifier == identifier)
-            result = await self.db.execute(stmt)
-            source = result.scalar_one_or_none()
-            if source:
-                return source
+        query = select(LogSource).where(LogSource.identifier == identifier)
+        result = await self.db.execute(query)
+        source = result.scalar_one_or_none()
 
-        # Create new source
-        source_create = LogSourceCreate(
-            identifier=identifier,
-            ip_address=ip_address,
-            first_seen=datetime.utcnow(),
-            last_seen=datetime.utcnow(),
-        )
-
-        source = LogSource(**source_create.dict())
-        self.db.add(source)
-        await self.db.commit()
-        await self.db.refresh(source)
+        if not source:
+            # Create new source
+            source = LogSource(
+                identifier=identifier,
+                ip_address=ip_address,
+                created_at=datetime.utcnow(),
+            )
+            self.db.add(source)
+            await self.db.commit()
+            await self.db.refresh(source)
 
         return source
 
@@ -236,47 +293,32 @@ class LogService:
             },
         }
 
-    async def get_statistics(
-        self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None
-    ) -> Dict[str, Any]:
-        """Get log ingestion statistics.
+    async def create_log(
+        self, severity: str, message: str, source: str, details: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Create a new log entry."""
+        try:
+            log = LogEntry(
+                severity=severity,
+                message=message,
+                source=source,
+                details=details or {},
+                timestamp=datetime.utcnow(),
+            )
+            self.db.add(log)
+            await self.db.commit()
 
-        Args:
-            start_time: Optional start time for statistics
-            end_time: Optional end time for statistics
-
-        Returns:
-            Dict[str, Any]: Statistics
-        """
-        # Build base query
-        query = select(LogEntry)
-
-        # Apply time filters
-        if start_time:
-            query = query.where(LogEntry.timestamp >= start_time)
-        if end_time:
-            query = query.where(LogEntry.timestamp <= end_time)
-
-        # Get total logs
-        total_stmt = select(func.count(LogEntry.id)).select_from(query.subquery())
-        total_result = await self.db.execute(total_stmt)
-        total_logs = total_result.scalar_one()
-
-        # Get source statistics
-        source_stmt = (
-            select(LogSource.identifier, func.count(LogEntry.id).label("count"))
-            .join(LogEntry)
-            .group_by(LogSource.identifier)
-        )
-
-        source_result = await self.db.execute(source_stmt)
-        source_stats = {row.identifier: row.count for row in source_result}
-
-        return {
-            "total_logs": total_logs,
-            "source_stats": source_stats,
-            "time_range": {
-                "start": start_time.isoformat() if start_time else None,
-                "end": end_time.isoformat() if end_time else None,
-            },
-        }
+            # Publish log to NATS
+            await self.nats.publish(
+                "system.logs",
+                {
+                    "severity": severity,
+                    "message": message,
+                    "source": source,
+                    "details": details,
+                    "timestamp": log.timestamp.isoformat(),
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error creating log entry: {e}")
+            raise

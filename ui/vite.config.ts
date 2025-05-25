@@ -10,8 +10,9 @@ export default defineConfig({
     strictPort: true, // Don't try other ports if 3000 is taken
     cors: true,       // Enable CORS
     hmr: {
-      host: '0.0.0.0', // Allow HMR from external access
-      port: 3000
+      host: 'localhost', // Use localhost for HMR
+      port: 3000,
+      clientPort: 3000,
     }
   }
 })

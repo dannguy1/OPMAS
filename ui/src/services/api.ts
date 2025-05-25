@@ -1,130 +1,172 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { toast } from 'react-hot-toast';
 import { Agent, AgentRule, Finding, FindingFilter, Configuration } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// API configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_TIMEOUT = 10000; // 10 seconds
 
-class ApiService {
-  private api: AxiosInstance;
-
-  constructor() {
-    this.api = axios.create({
-      baseURL: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // Add request interceptor for authentication
-    this.api.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    // Add response interceptor for error handling
-    this.api.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized access
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  // Generic request method
-  private async request<T>(config: AxiosRequestConfig): Promise<T> {
-    const response = await this.api.request<T>(config);
-    return response.data;
-  }
-
-  // Agent endpoints
-  async getAgents(enabled?: boolean): Promise<Agent[]> {
-    const params = enabled !== undefined ? { enabled } : {};
-    return this.request<Agent[]>({ method: 'GET', url: '/agents', params });
-  }
-
-  async getAgent(name: string): Promise<Agent> {
-    return this.request<Agent>({ method: 'GET', url: `/agents/${name}` });
-  }
-
-  async createAgent(agent: Omit<Agent, 'id' | 'status' | 'created_at' | 'updated_at'>): Promise<Agent> {
-    return this.request<Agent>({ method: 'POST', url: '/agents', data: agent });
-  }
-
-  async updateAgent(name: string, agent: Partial<Agent>): Promise<Agent> {
-    return this.request<Agent>({ method: 'PUT', url: `/agents/${name}`, data: agent });
-  }
-
-  async deleteAgent(name: string): Promise<void> {
-    return this.request<void>({ method: 'DELETE', url: `/agents/${name}` });
-  }
-
-  // Agent Rule endpoints
-  async getAgentRules(agentName: string, enabled?: boolean): Promise<AgentRule[]> {
-    const params = enabled !== undefined ? { enabled } : {};
-    return this.request<AgentRule[]>({ method: 'GET', url: `/agents/${agentName}/rules`, params });
-  }
-
-  async createAgentRule(agentName: string, rule: Omit<AgentRule, 'id' | 'agent_id' | 'created_at' | 'updated_at'>): Promise<AgentRule> {
-    return this.request<AgentRule>({ method: 'POST', url: `/agents/${agentName}/rules`, data: rule });
-  }
-
-  async updateAgentRule(agentName: string, ruleName: string, rule: Partial<AgentRule>): Promise<AgentRule> {
-    return this.request<AgentRule>({ method: 'PUT', url: `/agents/${agentName}/rules/${ruleName}`, data: rule });
-  }
-
-  async deleteAgentRule(agentName: string, ruleName: string): Promise<void> {
-    return this.request<void>({ method: 'DELETE', url: `/agents/${agentName}/rules/${ruleName}` });
-  }
-
-  // Finding endpoints
-  async getFindings(filter: FindingFilter): Promise<Finding[]> {
-    return this.request<Finding[]>({ method: 'GET', url: '/findings', params: filter });
-  }
-
-  async getFinding(id: number): Promise<Finding> {
-    return this.request<Finding>({ method: 'GET', url: `/findings/${id}` });
-  }
-
-  async deleteFinding(id: number): Promise<void> {
-    return this.request<void>({ method: 'DELETE', url: `/findings/${id}` });
-  }
-
-  // Configuration endpoints
-  async getConfigurations(): Promise<Configuration[]> {
-    return this.request<Configuration[]>({ method: 'GET', url: '/config' });
-  }
-
-  async getConfiguration(id: number): Promise<Configuration> {
-    return this.request<Configuration>({ method: 'GET', url: `/config/${id}` });
-  }
-
-  async createConfiguration(config: Omit<Configuration, 'id' | 'created_at' | 'updated_at'>): Promise<Configuration> {
-    return this.request<Configuration>({ method: 'POST', url: '/config', data: config });
-  }
-
-  async updateConfiguration(id: number, config: Partial<Configuration>): Promise<Configuration> {
-    return this.request<Configuration>({ method: 'PUT', url: `/config/${id}`, data: config });
-  }
-
-  async deleteConfiguration(id: number): Promise<void> {
-    return this.request<void>({ method: 'DELETE', url: `/config/${id}` });
-  }
-
-  // Health check
-  async checkHealth(): Promise<{ status: string; timestamp: string }> {
-    return this.request<{ status: string; timestamp: string }>({ method: 'GET', url: '/health' });
+// Error types
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public code?: string,
+    public data?: any
+  ) {
+    super(message);
+    this.name = 'APIError';
   }
 }
 
-export const apiService = new ApiService();
-export default apiService;
+// Create axios instance
+const apiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor
+apiClient.interceptors.request.use(
+  (config: AxiosRequestConfig) => {
+    // Get token from localStorage
+    const token = localStorage.getItem('auth_token');
+
+    // Add token to headers if it exists
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    return response;
+  },
+  (error: AxiosError) => {
+    if (error.response) {
+      // Handle specific error cases
+      switch (error.response.status) {
+        case 401:
+          // Unauthorized - clear token and redirect to login
+          localStorage.removeItem('auth_token');
+          window.location.href = '/login';
+          break;
+        case 403:
+          toast.error('You do not have permission to perform this action');
+          break;
+        case 429:
+          toast.error('Too many requests. Please try again later');
+          break;
+        default:
+          toast.error(error.response.data?.message || 'An error occurred');
+      }
+
+      // Create APIError with response data
+      return Promise.reject(
+        new APIError(
+          error.response.data?.message || 'An error occurred',
+          error.response.status,
+          error.response.data?.code,
+          error.response.data
+        )
+      );
+    }
+
+    // Network error or timeout
+    if (error.code === 'ECONNABORTED') {
+      toast.error('Request timed out. Please try again');
+    } else {
+      toast.error('Network error. Please check your connection');
+    }
+
+    return Promise.reject(
+      new APIError(
+        error.message || 'Network error',
+        undefined,
+        error.code
+      )
+    );
+  }
+);
+
+// API methods
+export const api = {
+  // Auth endpoints
+  auth: {
+    login: async (username: string, password: string) => {
+      const response = await apiClient.post('/auth/login', { username, password });
+      return response.data;
+    },
+    logout: async () => {
+      const response = await apiClient.post('/auth/logout');
+      return response.data;
+    },
+    refreshToken: async () => {
+      const response = await apiClient.post('/auth/refresh');
+      return response.data;
+    },
+  },
+
+  // System status
+  status: {
+    getSystemStatus: async () => {
+      const response = await apiClient.get('/status');
+      return response.data;
+    },
+    startSystem: async () => {
+      const response = await apiClient.post('/control/start');
+      return response.data;
+    },
+    stopSystem: async () => {
+      const response = await apiClient.post('/control/stop');
+      return response.data;
+    },
+  },
+
+  // Agents
+  agents: {
+    list: async () => {
+      const response = await apiClient.get('/agents');
+      return response.data;
+    },
+    get: async (id: string) => {
+      const response = await apiClient.get(`/agents/${id}`);
+      return response.data;
+    },
+    create: async (data: any) => {
+      const response = await apiClient.post('/agents', data);
+      return response.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await apiClient.put(`/agents/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/agents/${id}`);
+      return response.data;
+    },
+  },
+
+  // Findings
+  findings: {
+    list: async (params?: any) => {
+      const response = await apiClient.get('/findings', { params });
+      return response.data;
+    },
+    get: async (id: string) => {
+      const response = await apiClient.get(`/findings/${id}`);
+      return response.data;
+    },
+  },
+};
+
+export default api;
