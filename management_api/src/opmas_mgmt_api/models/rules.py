@@ -1,15 +1,17 @@
 """Rule management models."""
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, JSON, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from opmas_mgmt_api.db.base_class import Base
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+
 
 class Rule(Base):
     """Rule model."""
+
     __tablename__ = "rules"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -49,5 +51,5 @@ class Rule(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_triggered": self.last_triggered.isoformat() if self.last_triggered else None,
-            "trigger_count": self.trigger_count
-        } 
+            "trigger_count": self.trigger_count,
+        }

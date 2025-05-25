@@ -1,7 +1,9 @@
-from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, validator
+
 
 class RuleBase(BaseModel):
     name: str
@@ -11,36 +13,38 @@ class RuleBase(BaseModel):
     priority: int = 0
     agent_id: int
 
-    @validator('name')
+    @validator("name")
     def validate_name(cls, v):
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid rule name format')
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid rule name format")
         return v
 
-    @validator('priority')
+    @validator("priority")
     def validate_priority(cls, v):
         if v < 0 or v > 100:
-            raise ValueError('Priority must be between 0 and 100')
+            raise ValueError("Priority must be between 0 and 100")
         return v
 
-    @validator('condition')
+    @validator("condition")
     def validate_condition(cls, v):
         if not isinstance(v, dict):
-            raise ValueError('Condition must be a dictionary')
-        if 'type' not in v:
-            raise ValueError('Condition must have a type field')
+            raise ValueError("Condition must be a dictionary")
+        if "type" not in v:
+            raise ValueError("Condition must have a type field")
         return v
 
-    @validator('action')
+    @validator("action")
     def validate_action(cls, v):
         if not isinstance(v, dict):
-            raise ValueError('Action must be a dictionary')
-        if 'type' not in v:
-            raise ValueError('Action must have a type field')
+            raise ValueError("Action must be a dictionary")
+        if "type" not in v:
+            raise ValueError("Action must have a type field")
         return v
+
 
 class RuleCreate(RuleBase):
     pass
+
 
 class RuleUpdate(BaseModel):
     name: Optional[str] = None
@@ -51,35 +55,36 @@ class RuleUpdate(BaseModel):
     priority: Optional[int] = None
     agent_id: Optional[int] = None
 
-    @validator('name')
+    @validator("name")
     def validate_name(cls, v):
-        if v is not None and not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid rule name format')
+        if v is not None and not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid rule name format")
         return v
 
-    @validator('priority')
+    @validator("priority")
     def validate_priority(cls, v):
         if v is not None and (v < 0 or v > 100):
-            raise ValueError('Priority must be between 0 and 100')
+            raise ValueError("Priority must be between 0 and 100")
         return v
 
-    @validator('condition')
+    @validator("condition")
     def validate_condition(cls, v):
         if v is not None:
             if not isinstance(v, dict):
-                raise ValueError('Condition must be a dictionary')
-            if 'type' not in v:
-                raise ValueError('Condition must have a type field')
+                raise ValueError("Condition must be a dictionary")
+            if "type" not in v:
+                raise ValueError("Condition must have a type field")
         return v
 
-    @validator('action')
+    @validator("action")
     def validate_action(cls, v):
         if v is not None:
             if not isinstance(v, dict):
-                raise ValueError('Action must be a dictionary')
-            if 'type' not in v:
-                raise ValueError('Action must have a type field')
+                raise ValueError("Action must be a dictionary")
+            if "type" not in v:
+                raise ValueError("Action must have a type field")
         return v
+
 
 class RuleInDB(RuleBase):
     id: int
@@ -90,6 +95,7 @@ class RuleInDB(RuleBase):
     class Config:
         from_attributes = True
 
+
 class RuleStatus(BaseModel):
     enabled: bool
-    updated_at: datetime 
+    updated_at: datetime

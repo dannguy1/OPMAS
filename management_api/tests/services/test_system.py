@@ -1,21 +1,22 @@
 """Test system management service."""
 
-import pytest
 from datetime import datetime
-from unittest.mock import AsyncMock, patch, MagicMock
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from opmas_mgmt_api.services.system import SystemService
+import pytest
 from opmas_mgmt_api.models.system import SystemConfig
+from opmas_mgmt_api.schemas.system import SystemConfig as SystemConfigSchema
 from opmas_mgmt_api.schemas.system import (
-    SystemStatus,
+    SystemConfigUpdate,
+    SystemControl,
     SystemHealth,
     SystemMetrics,
-    SystemConfig as SystemConfigSchema,
-    SystemConfigUpdate,
-    SystemControl
+    SystemStatus,
 )
+from opmas_mgmt_api.services.system import SystemService
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 @pytest.fixture
 def mock_db():
@@ -26,6 +27,7 @@ def mock_db():
     session.refresh = AsyncMock()
     return session
 
+
 @pytest.fixture
 def mock_nats():
     """Create mock NATS manager."""
@@ -34,10 +36,12 @@ def mock_nats():
     nats.is_connected = MagicMock(return_value=True)
     return nats
 
+
 @pytest.fixture
 def system_service(mock_db, mock_nats):
     """Create system service instance."""
     return SystemService(mock_db, mock_nats)
+
 
 @pytest.fixture
 def test_system_config():
@@ -45,21 +49,13 @@ def test_system_config():
     return SystemConfig(
         id="test-id",
         version="1.0.0",
-        components={
-            "database": {"pool_size": 10},
-            "nats": {"max_reconnects": 5}
-        },
-        security={
-            "jwt_secret": "test-secret",
-            "token_expiry": 3600
-        },
-        logging={
-            "level": "INFO",
-            "format": "json"
-        },
+        components={"database": {"pool_size": 10}, "nats": {"max_reconnects": 5}},
+        security={"jwt_secret": "test-secret", "token_expiry": 3600},
+        logging={"level": "INFO", "format": "json"},
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
     )
+
 
 async def test_get_system_status(system_service):
     """Test getting system status."""
@@ -71,6 +67,7 @@ async def test_get_system_status(system_service):
     assert isinstance(status.health, SystemHealth)
     assert isinstance(status.timestamp, datetime)
 
+
 async def test_get_system_health(system_service):
     """Test getting system health."""
     health = await system_service.get_system_health()
@@ -78,6 +75,7 @@ async def test_get_system_health(system_service):
     assert health.status in ["healthy", "unhealthy", "degraded"]
     assert isinstance(health.components, dict)
     assert isinstance(health.timestamp, datetime)
+
 
 async def test_get_system_metrics(system_service):
     """Test getting system metrics."""
@@ -87,10 +85,11 @@ async def test_get_system_metrics(system_service):
     assert isinstance(metrics.system, dict)
     assert isinstance(metrics.timestamp, datetime)
 
+
 async def test_get_system_config(system_service, test_system_config):
     """Test getting system config."""
     system_service.db.execute.return_value.scalar_one_or_none.return_value = test_system_config
-    
+
     config = await system_service.get_system_config()
     assert isinstance(config, SystemConfigSchema)
     assert config.version == test_system_config.version
@@ -99,10 +98,11 @@ async def test_get_system_config(system_service, test_system_config):
     assert config.logging == test_system_config.logging
     assert isinstance(config.timestamp, datetime)
 
+
 async def test_get_system_config_default(system_service):
     """Test getting default system config."""
     system_service.db.execute.return_value.scalar_one_or_none.return_value = None
-    
+
     config = await system_service.get_system_config()
     assert isinstance(config, SystemConfigSchema)
     assert config.version is not None
@@ -111,26 +111,25 @@ async def test_get_system_config_default(system_service):
     assert isinstance(config.logging, dict)
     assert isinstance(config.timestamp, datetime)
 
+
 async def test_update_system_config(system_service, test_system_config):
     """Test updating system config."""
-    update_data = SystemConfigUpdate(
-        version="1.0.1",
-        components={"database": {"pool_size": 20}}
-    )
-    
+    update_data = SystemConfigUpdate(version="1.0.1", components={"database": {"pool_size": 20}})
+
     system_service.db.add = MagicMock()
     system_service.db.refresh = AsyncMock()
-    
+
     config = await system_service.update_system_config(update_data)
     assert isinstance(config, SystemConfigSchema)
     assert config.version == update_data.version
     assert config.components["database"]["pool_size"] == 20
     assert isinstance(config.timestamp, datetime)
-    
+
     system_service.nats.publish.assert_called_once()
     system_service.db.add.assert_called_once()
     system_service.db.commit.assert_called_once()
     system_service.db.refresh.assert_called_once()
+
 
 async def test_control_system(system_service):
     """Test controlling system."""
@@ -140,18 +139,21 @@ async def test_control_system(system_service):
     assert control.action == action
     assert control.status == "accepted"
     assert isinstance(control.timestamp, datetime)
-    
+
     system_service.nats.publish.assert_called_once()
+
 
 async def test_control_system_invalid_action(system_service):
     """Test controlling system with invalid action."""
     with pytest.raises(ValueError):
         await system_service.control_system("invalid")
 
+
 async def test_get_system_logs(system_service):
     """Test getting system logs."""
     logs = await system_service.get_system_logs()
     assert isinstance(logs, list)
+
 
 async def test_check_database_health(system_service):
     """Test checking database health."""
@@ -161,10 +163,11 @@ async def test_check_database_health(system_service):
     assert "message" in health
     assert health["status"] in ["healthy", "unhealthy"]
 
+
 async def test_check_nats_health(system_service):
     """Test checking NATS health."""
     health = await system_service._check_nats_health()
     assert isinstance(health, dict)
     assert "status" in health
     assert "message" in health
-    assert health["status"] in ["healthy", "unhealthy"] 
+    assert health["status"] in ["healthy", "unhealthy"]

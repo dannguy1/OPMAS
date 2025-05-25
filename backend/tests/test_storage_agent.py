@@ -2,24 +2,26 @@
 
 """Tests for the StorageAgent class."""
 
-import pytest
 import time
+from collections import deque
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from collections import deque
+
+import pytest
 
 from opmas.agents.storage_agent_package.agent import StorageAgent
-from opmas.data_models import ParsedLogEvent, AgentFinding
+from opmas.data_models import AgentFinding, ParsedLogEvent
+
 
 @pytest.fixture
 def storage_agent():
     """Create a StorageAgent instance with a mock NATS client."""
-    with patch('opmas.agents.storage_agent_package.agent.BaseAgent.__init__') as mock_init:
+    with patch("opmas.agents.storage_agent_package.agent.BaseAgent.__init__") as mock_init:
         mock_init.return_value = None
         agent = StorageAgent(
             agent_name="StorageAgent",
             subscribed_topics=["logs.storage"],
-            findings_topic="findings.storage"
+            findings_topic="findings.storage",
         )
         agent.nats_client = AsyncMock()
         agent.publish_finding = AsyncMock()
@@ -30,7 +32,7 @@ def storage_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "IOIssues": {
                 "enabled": True,
@@ -38,7 +40,7 @@ def storage_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "Medium"
+                "severity": "Medium",
             },
             "FileSystemIssues": {
                 "enabled": True,
@@ -46,7 +48,7 @@ def storage_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "High"
+                "severity": "High",
             },
             "ConfigurationIssues": {
                 "enabled": True,
@@ -54,11 +56,12 @@ def storage_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "Medium"
-            }
+                "severity": "Medium",
+            },
         }
         agent._initialize_state()
         return agent
+
 
 @pytest.fixture
 def disk_log_event():
@@ -68,8 +71,9 @@ def disk_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Disk space low: /var"
+        message="Disk space low: /var",
     )
+
 
 @pytest.fixture
 def io_log_event():
@@ -79,8 +83,9 @@ def io_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="I/O error: timeout"
+        message="I/O error: timeout",
     )
+
 
 @pytest.fixture
 def fs_log_event():
@@ -90,8 +95,9 @@ def fs_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="File system error: corruption"
+        message="File system error: corruption",
     )
+
 
 @pytest.fixture
 def config_log_event():
@@ -101,8 +107,9 @@ def config_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Storage config error: invalid_mount"
+        message="Storage config error: invalid_mount",
     )
+
 
 def test_initialize_state(storage_agent):
     """Test initialization of state variables."""
@@ -110,25 +117,27 @@ def test_initialize_state(storage_agent):
     assert isinstance(storage_agent.io_timestamps, dict)
     assert isinstance(storage_agent.fs_timestamps, dict)
     assert isinstance(storage_agent.config_timestamps, dict)
-    
+
     assert isinstance(storage_agent.recent_disk_findings, dict)
     assert isinstance(storage_agent.recent_io_findings, dict)
     assert isinstance(storage_agent.recent_fs_findings, dict)
     assert isinstance(storage_agent.recent_config_findings, dict)
 
+
 def test_compile_rule_patterns(storage_agent):
     """Test compilation of rule patterns."""
     storage_agent._compile_rule_patterns()
-    
+
     assert "DiskSpaceIssues" in storage_agent.compiled_patterns
     assert "IOIssues" in storage_agent.compiled_patterns
     assert "FileSystemIssues" in storage_agent.compiled_patterns
     assert "ConfigurationIssues" in storage_agent.compiled_patterns
-    
+
     for rule_name, patterns in storage_agent.compiled_patterns.items():
         assert len(patterns) > 0
         for pattern in patterns:
-            assert hasattr(pattern, 'search')
+            assert hasattr(pattern, "search")
+
 
 @pytest.mark.asyncio
 async def test_check_disk_space_issues(storage_agent, disk_log_event):
@@ -136,7 +145,7 @@ async def test_check_disk_space_issues(storage_agent, disk_log_event):
     # Add multiple disk issues to trigger threshold
     for _ in range(3):
         await storage_agent._check_disk_space_issues(disk_log_event)
-    
+
     # Verify finding was published
     storage_agent.publish_finding.assert_called_once()
     finding = storage_agent.publish_finding.call_args[0][0]
@@ -147,13 +156,14 @@ async def test_check_disk_space_issues(storage_agent, disk_log_event):
     assert finding.details["disk_issues"] == ["/var"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_io_issues(storage_agent, io_log_event):
     """Test detection of I/O issues."""
     # Add multiple I/O issues to trigger threshold
     for _ in range(3):
         await storage_agent._check_io_issues(io_log_event)
-    
+
     # Verify finding was published
     storage_agent.publish_finding.assert_called_once()
     finding = storage_agent.publish_finding.call_args[0][0]
@@ -164,11 +174,12 @@ async def test_check_io_issues(storage_agent, io_log_event):
     assert finding.details["io_issues"] == ["timeout"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_file_system_issues(storage_agent, fs_log_event):
     """Test detection of file system issues."""
     await storage_agent._check_file_system_issues(fs_log_event)
-    
+
     # Verify finding was published
     storage_agent.publish_finding.assert_called_once()
     finding = storage_agent.publish_finding.call_args[0][0]
@@ -179,11 +190,12 @@ async def test_check_file_system_issues(storage_agent, fs_log_event):
     assert finding.details["fs_issues"] == ["corruption"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_configuration_issues(storage_agent, config_log_event):
     """Test detection of configuration issues."""
     await storage_agent._check_configuration_issues(config_log_event)
-    
+
     # Verify finding was published
     storage_agent.publish_finding.assert_called_once()
     finding = storage_agent.publish_finding.call_args[0][0]
@@ -194,14 +206,15 @@ async def test_check_configuration_issues(storage_agent, config_log_event):
     assert finding.details["config_issues"] == ["invalid_mount"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_process_log_event(storage_agent, disk_log_event):
     """Test processing of log events."""
     # Add multiple disk issues to trigger threshold
     for _ in range(3):
         await storage_agent.process_log_event(disk_log_event)
-    
+
     # Verify finding was published
     storage_agent.publish_finding.assert_called_once()
     finding = storage_agent.publish_finding.call_args[0][0]
-    assert finding.finding_type == "DiskSpaceIssues" 
+    assert finding.finding_type == "DiskSpaceIssues"

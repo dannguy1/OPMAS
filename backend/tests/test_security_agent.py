@@ -2,24 +2,26 @@
 
 """Tests for the SecurityAgent class."""
 
-import pytest
 import time
+from collections import deque
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from collections import deque
+
+import pytest
 
 from opmas.agents.security_agent_package.agent import SecurityAgent
-from opmas.data_models import ParsedLogEvent, AgentFinding
+from opmas.data_models import AgentFinding, ParsedLogEvent
+
 
 @pytest.fixture
 def security_agent():
     """Create a SecurityAgent instance with a mock NATS client."""
-    with patch('opmas.agents.security_agent_package.agent.BaseAgent.__init__') as mock_init:
+    with patch("opmas.agents.security_agent_package.agent.BaseAgent.__init__") as mock_init:
         mock_init.return_value = None
         agent = SecurityAgent(
             agent_name="SecurityAgent",
             subscribed_topics=["logs.security"],
-            findings_topic="findings.security"
+            findings_topic="findings.security",
         )
         agent.nats_client = AsyncMock()
         agent.publish_finding = AsyncMock()
@@ -30,7 +32,7 @@ def security_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "SuspiciousAccess": {
                 "enabled": True,
@@ -38,7 +40,7 @@ def security_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "SecurityBreach": {
                 "enabled": True,
@@ -46,7 +48,7 @@ def security_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "Critical"
+                "severity": "Critical",
             },
             "PolicyViolation": {
                 "enabled": True,
@@ -54,11 +56,12 @@ def security_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "High"
-            }
+                "severity": "High",
+            },
         }
         agent._initialize_state()
         return agent
+
 
 @pytest.fixture
 def auth_log_event():
@@ -68,8 +71,9 @@ def auth_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Authentication failed: invalid_credentials"
+        message="Authentication failed: invalid_credentials",
     )
+
 
 @pytest.fixture
 def access_log_event():
@@ -79,8 +83,9 @@ def access_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Suspicious access: unauthorized_port"
+        message="Suspicious access: unauthorized_port",
     )
+
 
 @pytest.fixture
 def breach_log_event():
@@ -90,8 +95,9 @@ def breach_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Security breach: data_exfiltration"
+        message="Security breach: data_exfiltration",
     )
+
 
 @pytest.fixture
 def policy_log_event():
@@ -101,8 +107,9 @@ def policy_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Policy violation: weak_password"
+        message="Policy violation: weak_password",
     )
+
 
 def test_initialize_state(security_agent):
     """Test initialization of state variables."""
@@ -110,25 +117,27 @@ def test_initialize_state(security_agent):
     assert isinstance(security_agent.access_timestamps, dict)
     assert isinstance(security_agent.breach_timestamps, dict)
     assert isinstance(security_agent.policy_timestamps, dict)
-    
+
     assert isinstance(security_agent.recent_auth_findings, dict)
     assert isinstance(security_agent.recent_access_findings, dict)
     assert isinstance(security_agent.recent_breach_findings, dict)
     assert isinstance(security_agent.recent_policy_findings, dict)
 
+
 def test_compile_rule_patterns(security_agent):
     """Test compilation of rule patterns."""
     security_agent._compile_rule_patterns()
-    
+
     assert "AuthenticationFailures" in security_agent.compiled_patterns
     assert "SuspiciousAccess" in security_agent.compiled_patterns
     assert "SecurityBreach" in security_agent.compiled_patterns
     assert "PolicyViolation" in security_agent.compiled_patterns
-    
+
     for rule_name, patterns in security_agent.compiled_patterns.items():
         assert len(patterns) > 0
         for pattern in patterns:
-            assert hasattr(pattern, 'search')
+            assert hasattr(pattern, "search")
+
 
 @pytest.mark.asyncio
 async def test_check_authentication_failures(security_agent, auth_log_event):
@@ -136,7 +145,7 @@ async def test_check_authentication_failures(security_agent, auth_log_event):
     # Add multiple auth failures to trigger threshold
     for _ in range(3):
         await security_agent._check_authentication_failures(auth_log_event)
-    
+
     # Verify finding was published
     security_agent.publish_finding.assert_called_once()
     finding = security_agent.publish_finding.call_args[0][0]
@@ -147,13 +156,14 @@ async def test_check_authentication_failures(security_agent, auth_log_event):
     assert finding.details["auth_issues"] == ["invalid_credentials"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_suspicious_access(security_agent, access_log_event):
     """Test detection of suspicious access."""
     # Add multiple access attempts to trigger threshold
     for _ in range(3):
         await security_agent._check_suspicious_access(access_log_event)
-    
+
     # Verify finding was published
     security_agent.publish_finding.assert_called_once()
     finding = security_agent.publish_finding.call_args[0][0]
@@ -164,11 +174,12 @@ async def test_check_suspicious_access(security_agent, access_log_event):
     assert finding.details["access_issues"] == ["unauthorized_port"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_security_breach(security_agent, breach_log_event):
     """Test detection of security breaches."""
     await security_agent._check_security_breach(breach_log_event)
-    
+
     # Verify finding was published
     security_agent.publish_finding.assert_called_once()
     finding = security_agent.publish_finding.call_args[0][0]
@@ -179,11 +190,12 @@ async def test_check_security_breach(security_agent, breach_log_event):
     assert finding.details["breach_issues"] == ["data_exfiltration"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_policy_violation(security_agent, policy_log_event):
     """Test detection of policy violations."""
     await security_agent._check_policy_violation(policy_log_event)
-    
+
     # Verify finding was published
     security_agent.publish_finding.assert_called_once()
     finding = security_agent.publish_finding.call_args[0][0]
@@ -194,14 +206,15 @@ async def test_check_policy_violation(security_agent, policy_log_event):
     assert finding.details["policy_issues"] == ["weak_password"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_process_log_event(security_agent, auth_log_event):
     """Test processing of log events."""
     # Add multiple auth failures to trigger threshold
     for _ in range(3):
         await security_agent.process_log_event(auth_log_event)
-    
+
     # Verify finding was published
     security_agent.publish_finding.assert_called_once()
     finding = security_agent.publish_finding.call_args[0][0]
-    assert finding.finding_type == "AuthenticationFailures" 
+    assert finding.finding_type == "AuthenticationFailures"

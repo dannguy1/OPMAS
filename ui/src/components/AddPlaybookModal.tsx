@@ -36,9 +36,9 @@ const AddPlaybookModal: React.FC<AddPlaybookModalProps> = ({ isOpen, onClose, on
     setIsSubmitting(true);
     try {
       // Call the onSubmit prop provided by the parent component
-      await onSubmit({ 
-        name: name.trim(), 
-        finding_type: findingType.trim(), 
+      await onSubmit({
+        name: name.trim(),
+        finding_type: findingType.trim(),
         description: description.trim() || undefined // Send undefined if empty
       });
       // Parent component (PlaybooksPage) will handle closing on success
@@ -57,19 +57,19 @@ const AddPlaybookModal: React.FC<AddPlaybookModalProps> = ({ isOpen, onClose, on
   }
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" 
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
       onClick={onClose} // Close modal on backdrop click
     >
-      <div 
-        className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" 
+      <div
+        className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
       >
         <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Add New Playbook</h2>
-        
+
         <form onSubmit={handleSubmit}>
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-          
+
           <div className="mb-4">
             <label htmlFor="playbookName" className="block text-sm font-medium text-gray-700 mb-1">
               Playbook Name <span className="text-red-500">*</span>
@@ -140,4 +140,4 @@ const AddPlaybookModal: React.FC<AddPlaybookModalProps> = ({ isOpen, onClose, on
   );
 };
 
-export default AddPlaybookModal; 
+export default AddPlaybookModal;

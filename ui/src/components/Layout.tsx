@@ -13,12 +13,15 @@ import {
   Toolbar,
   Typography,
   useTheme,
+  Divider,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   BugReport as BugReportIcon,
   Settings as SettingsIcon,
+  Security as SecurityIcon,
+  Storage as StorageIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -40,16 +43,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Findings', icon: <BugReportIcon />, path: '/findings' },
-    { text: 'Agents', icon: <SettingsIcon />, path: '/agents' },
+    { text: 'Agents', icon: <SecurityIcon />, path: '/agents' },
+    { text: 'Configurations', icon: <StorageIcon />, path: '/configurations' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   const drawer = (
     <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
+      <Toolbar sx={{
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
+      }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
           OPMAS
         </Typography>
       </Toolbar>
+      <Divider />
       <List>
         {menuItems.map((item) => (
           <ListItem
@@ -60,9 +69,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               setMobileOpen(false);
             }}
             selected={location.pathname === item.path}
+            sx={{
+              '&.Mui-selected': {
+                backgroundColor: theme.palette.primary.light,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.light,
+                },
+              },
+            }}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemIcon sx={{
+              color: location.pathname === item.path ? theme.palette.primary.main : 'inherit'
+            }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.text}
+              primaryTypographyProps={{
+                fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+              }}
+            />
           </ListItem>
         ))}
       </List>
@@ -77,6 +103,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         }}
       >
         <Toolbar>
@@ -89,7 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
             {menuItems.find((item) => item.path === location.pathname)?.text || 'OPMAS'}
           </Typography>
         </Toolbar>
@@ -103,7 +132,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
@@ -122,6 +151,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              borderRight: '1px solid rgba(0, 0, 0, 0.12)',
             },
           }}
           open
@@ -136,6 +166,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           mt: '64px',
+          backgroundColor: theme.palette.background.default,
+          minHeight: 'calc(100vh - 64px)',
         }}
       >
         {children}
@@ -144,4 +176,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

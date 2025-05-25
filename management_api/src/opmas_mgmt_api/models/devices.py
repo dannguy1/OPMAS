@@ -1,16 +1,19 @@
 """Device management models."""
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, JSON, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, INET
-from sqlalchemy.orm import relationship
 
 from opmas_mgmt_api.db.base_class import Base
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import relationship
+
 
 class Device(Base):
     """Device model."""
+
     __tablename__ = "devices"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -29,7 +32,9 @@ class Device(Base):
 
     # Relationships
     agent = relationship("Agent", back_populates="devices")
-    status_history = relationship("DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan")
+    status_history = relationship(
+        "DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan"
+    )
 
     # Indexes
     __table_args__ = (
@@ -56,11 +61,13 @@ class Device(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
-            "agent_id": str(self.agent_id) if self.agent_id else None
+            "agent_id": str(self.agent_id) if self.agent_id else None,
         }
+
 
 class DeviceStatusHistory(Base):
     """Device status history model."""
+
     __tablename__ = "device_status_history"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -85,5 +92,5 @@ class DeviceStatusHistory(Base):
             "device_id": str(self.device_id),
             "status": self.status,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "details": self.details
-        } 
+            "details": self.details,
+        }

@@ -380,4 +380,4 @@ sync; echo 3 > /proc/sys/vm/drop_caches
 ### 4. Issue Tracking
 - [GitHub Issues](https://github.com/your-org/opmas/issues)
 - [Bug Report Template](../templates/bug_report.md)
-- [Feature Request Template](../templates/feature_request.md) 
+- [Feature Request Template](../templates/feature_request.md)

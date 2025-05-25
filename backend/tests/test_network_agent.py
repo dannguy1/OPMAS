@@ -2,24 +2,26 @@
 
 """Tests for the NetworkAgent class."""
 
-import pytest
 import time
+from collections import deque
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from collections import deque
+
+import pytest
 
 from opmas.agents.network_agent_package.agent import NetworkAgent
-from opmas.data_models import ParsedLogEvent, AgentFinding
+from opmas.data_models import AgentFinding, ParsedLogEvent
+
 
 @pytest.fixture
 def network_agent():
     """Create a NetworkAgent instance with a mock NATS client."""
-    with patch('opmas.agents.network_agent_package.agent.BaseAgent.__init__') as mock_init:
+    with patch("opmas.agents.network_agent_package.agent.BaseAgent.__init__") as mock_init:
         mock_init.return_value = None
         agent = NetworkAgent(
             agent_name="NetworkAgent",
             subscribed_topics=["logs.network"],
-            findings_topic="findings.network"
+            findings_topic="findings.network",
         )
         agent.nats_client = AsyncMock()
         agent.publish_finding = AsyncMock()
@@ -30,7 +32,7 @@ def network_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "BandwidthIssues": {
                 "enabled": True,
@@ -38,7 +40,7 @@ def network_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "Medium"
+                "severity": "Medium",
             },
             "LatencyIssues": {
                 "enabled": True,
@@ -46,7 +48,7 @@ def network_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "Medium"
+                "severity": "Medium",
             },
             "NetworkSecurityIssues": {
                 "enabled": True,
@@ -54,11 +56,12 @@ def network_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "High"
-            }
+                "severity": "High",
+            },
         }
         agent._initialize_state()
         return agent
+
 
 @pytest.fixture
 def connectivity_log_event():
@@ -68,8 +71,9 @@ def connectivity_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Connection failed: timeout"
+        message="Connection failed: timeout",
     )
+
 
 @pytest.fixture
 def bandwidth_log_event():
@@ -79,8 +83,9 @@ def bandwidth_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Bandwidth exceeded: threshold_reached"
+        message="Bandwidth exceeded: threshold_reached",
     )
+
 
 @pytest.fixture
 def latency_log_event():
@@ -90,8 +95,9 @@ def latency_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="High latency: packet_loss"
+        message="High latency: packet_loss",
     )
+
 
 @pytest.fixture
 def security_log_event():
@@ -101,8 +107,9 @@ def security_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Security alert: port_scan"
+        message="Security alert: port_scan",
     )
+
 
 def test_initialize_state(network_agent):
     """Test initialization of state variables."""
@@ -110,25 +117,27 @@ def test_initialize_state(network_agent):
     assert isinstance(network_agent.bandwidth_timestamps, dict)
     assert isinstance(network_agent.latency_timestamps, dict)
     assert isinstance(network_agent.security_timestamps, dict)
-    
+
     assert isinstance(network_agent.recent_connectivity_findings, dict)
     assert isinstance(network_agent.recent_bandwidth_findings, dict)
     assert isinstance(network_agent.recent_latency_findings, dict)
     assert isinstance(network_agent.recent_security_findings, dict)
 
+
 def test_compile_rule_patterns(network_agent):
     """Test compilation of rule patterns."""
     network_agent._compile_rule_patterns()
-    
+
     assert "ConnectivityIssues" in network_agent.compiled_patterns
     assert "BandwidthIssues" in network_agent.compiled_patterns
     assert "LatencyIssues" in network_agent.compiled_patterns
     assert "NetworkSecurityIssues" in network_agent.compiled_patterns
-    
+
     for rule_name, patterns in network_agent.compiled_patterns.items():
         assert len(patterns) > 0
         for pattern in patterns:
-            assert hasattr(pattern, 'search')
+            assert hasattr(pattern, "search")
+
 
 @pytest.mark.asyncio
 async def test_check_connectivity_issues(network_agent, connectivity_log_event):
@@ -136,7 +145,7 @@ async def test_check_connectivity_issues(network_agent, connectivity_log_event):
     # Add multiple connectivity issues to trigger threshold
     for _ in range(3):
         await network_agent._check_connectivity_issues(connectivity_log_event)
-    
+
     # Verify finding was published
     network_agent.publish_finding.assert_called_once()
     finding = network_agent.publish_finding.call_args[0][0]
@@ -147,13 +156,14 @@ async def test_check_connectivity_issues(network_agent, connectivity_log_event):
     assert finding.details["connectivity_issues"] == ["timeout"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_bandwidth_issues(network_agent, bandwidth_log_event):
     """Test detection of bandwidth issues."""
     # Add multiple bandwidth issues to trigger threshold
     for _ in range(3):
         await network_agent._check_bandwidth_issues(bandwidth_log_event)
-    
+
     # Verify finding was published
     network_agent.publish_finding.assert_called_once()
     finding = network_agent.publish_finding.call_args[0][0]
@@ -164,13 +174,14 @@ async def test_check_bandwidth_issues(network_agent, bandwidth_log_event):
     assert finding.details["bandwidth_issues"] == ["threshold_reached"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_latency_issues(network_agent, latency_log_event):
     """Test detection of latency issues."""
     # Add multiple latency issues to trigger threshold
     for _ in range(3):
         await network_agent._check_latency_issues(latency_log_event)
-    
+
     # Verify finding was published
     network_agent.publish_finding.assert_called_once()
     finding = network_agent.publish_finding.call_args[0][0]
@@ -181,11 +192,12 @@ async def test_check_latency_issues(network_agent, latency_log_event):
     assert finding.details["latency_issues"] == ["packet_loss"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_network_security_issues(network_agent, security_log_event):
     """Test detection of network security issues."""
     await network_agent._check_network_security_issues(security_log_event)
-    
+
     # Verify finding was published
     network_agent.publish_finding.assert_called_once()
     finding = network_agent.publish_finding.call_args[0][0]
@@ -196,14 +208,15 @@ async def test_check_network_security_issues(network_agent, security_log_event):
     assert finding.details["security_issues"] == ["port_scan"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_process_log_event(network_agent, connectivity_log_event):
     """Test processing of log events."""
     # Add multiple connectivity issues to trigger threshold
     for _ in range(3):
         await network_agent.process_log_event(connectivity_log_event)
-    
+
     # Verify finding was published
     network_agent.publish_finding.assert_called_once()
     finding = network_agent.publish_finding.call_args[0][0]
-    assert finding.finding_type == "ConnectivityIssues" 
+    assert finding.finding_type == "ConnectivityIssues"

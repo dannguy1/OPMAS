@@ -17,4 +17,4 @@ production:
   port: 5432
   name: opmas_prod
   user: opmas_prod
-  password: opmas_prod_pass 
+  password: opmas_prod_pass

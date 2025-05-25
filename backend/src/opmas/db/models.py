@@ -4,20 +4,30 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey,
-    UniqueConstraint, Index
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
 )
-from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql import func # For server-side default timestamps
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.sql import func  # For server-side default timestamps
 
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+
 class OpmasConfig(Base):
     """Stores core key-value OPMAS configurations."""
-    __tablename__ = 'opmas_config'
+
+    __tablename__ = "opmas_config"
 
     key = Column(String, primary_key=True)
     # Use JSONB for flexibility in stored value types (strings, numbers, lists, objects)
@@ -26,13 +36,15 @@ class OpmasConfig(Base):
     def __repr__(self):
         return f"<OpmasConfig(key='{self.key}', value='{self.value}')>"
 
+
 class Agent(Base):
     """Defines an OPMAS agent."""
-    __tablename__ = 'agents'
+
+    __tablename__ = "agents"
 
     agent_id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False, index=True)
-    module_path = Column(String, nullable=False) # e.g., src.opmas.agents.wifi_agent
+    module_path = Column(String, nullable=False)  # e.g., src.opmas.agents.wifi_agent
     description = Column(Text, nullable=True)
     is_enabled = Column(Boolean, default=True, nullable=False)
 
@@ -43,12 +55,14 @@ class Agent(Base):
     def __repr__(self):
         return f"<Agent(agent_id={self.agent_id}, name='{self.name}', enabled={self.is_enabled})>"
 
+
 class AgentRule(Base):
     """Stores configuration rules for a specific agent."""
-    __tablename__ = 'agent_rules'
+
+    __tablename__ = "agent_rules"
 
     rule_id = Column(Integer, primary_key=True)
-    agent_id = Column(Integer, ForeignKey('agents.agent_id'), nullable=False, index=True)
+    agent_id = Column(Integer, ForeignKey("agents.agent_id"), nullable=False, index=True)
     rule_name = Column(String, nullable=False)
     # Store the rule definition (e.g., thresholds, patterns) as a JSON object
     rule_config = Column(JSONB, nullable=False)
@@ -57,14 +71,16 @@ class AgentRule(Base):
     agent = relationship("Agent", back_populates="rules")
 
     # Unique constraint for rule name within an agent
-    __table_args__ = (UniqueConstraint('agent_id', 'rule_name', name='uq_agent_rule_name'),)
+    __table_args__ = (UniqueConstraint("agent_id", "rule_name", name="uq_agent_rule_name"),)
 
     def __repr__(self):
         return f"<AgentRule(rule_id={self.rule_id}, agent_id={self.agent_id}, name='{self.rule_name}')>"
 
+
 class Playbook(Base):
     """Defines a playbook triggered by a specific finding type."""
-    __tablename__ = 'playbooks'
+
+    __tablename__ = "playbooks"
 
     playbook_id = Column(Integer, primary_key=True)
     # Finding type that triggers this playbook, e.g., 'HighAuthFailureRate'
@@ -73,22 +89,29 @@ class Playbook(Base):
     description = Column(Text, nullable=True)
 
     # Relationship
-    steps = relationship("PlaybookStep", back_populates="playbook", cascade="all, delete-orphan", order_by="PlaybookStep.step_order")
+    steps = relationship(
+        "PlaybookStep",
+        back_populates="playbook",
+        cascade="all, delete-orphan",
+        order_by="PlaybookStep.step_order",
+    )
 
     def __repr__(self):
         return f"<Playbook(playbook_id={self.playbook_id}, finding_type='{self.finding_type}', name='{self.name}')>"
 
+
 class PlaybookStep(Base):
     """Stores an individual step within a playbook."""
-    __tablename__ = 'playbook_steps'
+
+    __tablename__ = "playbook_steps"
 
     step_id = Column(Integer, primary_key=True)
-    playbook_id = Column(Integer, ForeignKey('playbooks.playbook_id'), nullable=False, index=True)
-    step_order = Column(Integer, nullable=False) # Order of execution within playbook
-    action_type = Column(String, nullable=False) # Identifier for the action
-    command_template = Column(Text, nullable=True) # Jinja2 template for command context logging
+    playbook_id = Column(Integer, ForeignKey("playbooks.playbook_id"), nullable=False, index=True)
+    step_order = Column(Integer, nullable=False)  # Order of execution within playbook
+    action_type = Column(String, nullable=False)  # Identifier for the action
+    command_template = Column(Text, nullable=True)  # Jinja2 template for command context logging
     description = Column(Text, nullable=True)
-    timeout_seconds = Column(Integer, nullable=True) # Less relevant now, but kept
+    timeout_seconds = Column(Integer, nullable=True)  # Less relevant now, but kept
     # Optional flexible config for the step itself
     step_config = Column(JSONB, nullable=True)
 
@@ -99,19 +122,23 @@ class PlaybookStep(Base):
     intended_actions = relationship("IntendedAction", back_populates="playbook_step")
 
     # Unique constraint for step order within a playbook
-    __table_args__ = (UniqueConstraint('playbook_id', 'step_order', name='uq_playbook_step_order'),
-                      Index('ix_playbook_step_playbook_id_order', 'playbook_id', 'step_order'))
+    __table_args__ = (
+        UniqueConstraint("playbook_id", "step_order", name="uq_playbook_step_order"),
+        Index("ix_playbook_step_playbook_id_order", "playbook_id", "step_order"),
+    )
 
     def __repr__(self):
         return f"<PlaybookStep(step_id={self.step_id}, playbook_id={self.playbook_id}, order={self.step_order}, action='{self.action_type}')>"
 
+
 class Finding(Base):
     """Stores findings generated by agents."""
-    __tablename__ = 'findings'
+
+    __tablename__ = "findings"
 
     # Use the finding_id generated by the agent (UUID string)
     finding_id = Column(String, primary_key=True)
-    agent_id = Column(Integer, ForeignKey('agents.agent_id'), nullable=False, index=True)
+    agent_id = Column(Integer, ForeignKey("agents.agent_id"), nullable=False, index=True)
     timestamp_utc = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     finding_type = Column(String, nullable=False, index=True)
     device_hostname = Column(String, nullable=True)
@@ -121,35 +148,42 @@ class Finding(Base):
 
     # Relationships
     agent = relationship("Agent", back_populates="findings")
-    intended_actions = relationship("IntendedAction", back_populates="finding", cascade="all, delete-orphan")
+    intended_actions = relationship(
+        "IntendedAction", back_populates="finding", cascade="all, delete-orphan"
+    )
 
-    __table_args__ = (Index('ix_findings_timestamp_type', 'timestamp_utc', 'finding_type'),)
+    __table_args__ = (Index("ix_findings_timestamp_type", "timestamp_utc", "finding_type"),)
 
     def __repr__(self):
         return f"<Finding(finding_id='{self.finding_id}', type='{self.finding_type}', agent={self.agent_id})>"
 
+
 class IntendedAction(Base):
     """Logs actions the Orchestrator intended to take based on findings/playbooks."""
-    __tablename__ = 'intended_actions'
 
-    action_id = Column(Integer, primary_key=True) # Simple auto-incrementing ID
-    finding_id = Column(String, ForeignKey('findings.finding_id'), nullable=False, index=True)
-    playbook_step_id = Column(Integer, ForeignKey('playbook_steps.step_id'), nullable=True, index=True)
+    __tablename__ = "intended_actions"
+
+    action_id = Column(Integer, primary_key=True)  # Simple auto-incrementing ID
+    finding_id = Column(String, ForeignKey("findings.finding_id"), nullable=False, index=True)
+    playbook_step_id = Column(
+        Integer, ForeignKey("playbook_steps.step_id"), nullable=True, index=True
+    )
     timestamp_utc = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     action_type = Column(String, nullable=False)
-    rendered_command_context = Column(Text, nullable=True) # The command string/context logged
+    rendered_command_context = Column(Text, nullable=True)  # The command string/context logged
 
     # Relationships
     finding = relationship("Finding", back_populates="intended_actions")
     playbook_step = relationship("PlaybookStep", back_populates="intended_actions")
 
-    __table_args__ = (Index('ix_intended_actions_timestamp_type', 'timestamp_utc', 'action_type'),)
+    __table_args__ = (Index("ix_intended_actions_timestamp_type", "timestamp_utc", "action_type"),)
 
     def __repr__(self):
         return f"<IntendedAction(action_id={self.action_id}, type='{self.action_type}', finding_id='{self.finding_id}')>"
+
 
 # Example of how to create the engine and tables (would be in db_utils or init script)
 # from sqlalchemy import create_engine
 # DATABASE_URL = "postgresql://user:password@host:port/database"
 # engine = create_engine(DATABASE_URL)
-# Base.metadata.create_all(engine) 
+# Base.metadata.create_all(engine)

@@ -54,4 +54,4 @@ cd ..
 print_status "Running tests..."
 pytest
 
-print_status "Build completed successfully!" 
+print_status "Build completed successfully!"

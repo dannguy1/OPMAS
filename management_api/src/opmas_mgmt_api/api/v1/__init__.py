@@ -5,15 +5,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 # Import routers from endpoints
-from .endpoints import (
-    devices,
-    agents,
-    rules,
-    playbooks,
-    system,
-    logs,
-    configurations
-)
+from .endpoints import agents, configurations, devices, logs, playbooks, rules, system
 
 # Include all routers
 router.include_router(devices.router, prefix="/devices", tags=["Devices"])

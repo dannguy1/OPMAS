@@ -58,4 +58,4 @@ USER appuser
 
 # Run the application
 WORKDIR /app/management_api/src
-CMD ["python", "-m", "uvicorn", "opmas_mgmt_api.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["python", "-m", "uvicorn", "opmas_mgmt_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

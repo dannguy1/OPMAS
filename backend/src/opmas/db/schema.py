@@ -3,9 +3,9 @@
 # This script can be run directly to create the database file or used by
 # a KB management module to initialize the DB.
 
-import sqlite3
-import os
 import logging
+import os
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_findings_log_device ON findings_log (device_hostn
 CREATE INDEX IF NOT EXISTS idx_actions_log_device ON actions_log (device_hostname);
 """
 
+
 def create_schema(db_path=DEFAULT_DB_PATH):
     """Creates the database and tables if they don't exist."""
     conn = None
@@ -105,9 +106,12 @@ def create_schema(db_path=DEFAULT_DB_PATH):
         if conn:
             conn.close()
 
+
 if __name__ == "__main__":
     # Setup basic logging for testing
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     print(f"Creating OPMAS KB schema in database: {DEFAULT_DB_PATH}")
     create_schema()
-    print("Schema creation process finished.") 
+    print("Schema creation process finished.")

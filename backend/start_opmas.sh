@@ -90,7 +90,7 @@ stop_components() {
         echo "Warning: docker-compose not found or $COMPOSE_FILE missing. Cannot stop NATS/Postgres containers via compose."
     fi
 
-    # --- Stop Python Components --- 
+    # --- Stop Python Components ---
     if [ ! -f "$PID_FILE" ]; then
         echo "PID file '$PID_FILE' not found. Cannot stop Python components based on PID file."
         echo "Attempting generic pkill for Python components..."
@@ -150,4 +150,4 @@ case "$COMMAND" in
         ;;
 esac
 
-exit 0 
+exit 0

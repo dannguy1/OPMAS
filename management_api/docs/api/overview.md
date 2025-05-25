@@ -180,4 +180,4 @@ For API support:
 1. Check the [Troubleshooting Guide](../maintenance/troubleshooting.md)
 2. Review the [FAQ](../maintenance/faq.md)
 3. Open an issue in the project repository
-4. Contact the development team 
+4. Contact the development team

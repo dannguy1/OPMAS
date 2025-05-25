@@ -1,16 +1,18 @@
 """Agent management models."""
 
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
 from uuid import UUID, uuid4
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Index
+
+from opmas_mgmt_api.db.base_class import Base
+from sqlalchemy import JSON, Boolean, Column, DateTime, Index, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
-from opmas_mgmt_api.db.base_class import Base
 
 class Agent(Base):
     """Agent model."""
+
     __tablename__ = "agents"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -47,9 +49,9 @@ class Agent(Base):
             "version": self.version,
             "capabilities": self.capabilities,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"<Agent {self.name} ({self.agent_type})>" 
+        return f"<Agent {self.name} ({self.agent_type})>"

@@ -51,4 +51,4 @@ unauthorized_access:
   conditions:
     - field: "message"
       pattern: "(unauthorized|authentication failed|invalid credentials)"
-  severity: "error" 
+  severity: "error"

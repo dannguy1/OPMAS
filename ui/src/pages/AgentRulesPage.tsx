@@ -45,7 +45,7 @@ const AgentRulesPage: React.FC = () => {
     }
     try {
       const response = await apiClient.get<AgentRulesApiResponse>(
-          `/agents/${agentId}/rules`, 
+          `/agents/${agentId}/rules`,
           { params: { limit: 50, offset: 0 } }
       );
       setRules(response.data.rules || []);
@@ -58,11 +58,11 @@ const AgentRulesPage: React.FC = () => {
                setRules([]);
           } else {
               errorMsg = `Agent with ID ${agentId} not found.`;
-               setRules([]); 
+               setRules([]);
           }
       } else {
           errorMsg = `Failed to load rules for agent ${agentId}. Is the Management API running?`;
-           setRules([]); 
+           setRules([]);
       }
       if (!errorMsg.startsWith('No rules found')) {
           setError(errorMsg);
@@ -106,12 +106,12 @@ const AgentRulesPage: React.FC = () => {
   };
 
   const handleEditRuleSubmit = async (ruleId: number, updatedRuleData: { rule_name: string; rule_config: object }) => {
-     if (!agentId) return; 
+     if (!agentId) return;
      setError(null);
      try {
       const response = await apiClient.put<AgentRule>(`/agents/${agentId}/rules/${ruleId}`, updatedRuleData);
       const updatedRule = response.data;
-      setRules(currentRules => 
+      setRules(currentRules =>
           currentRules.map(r => (r.rule_id === updatedRule.rule_id ? updatedRule : r))
       );
       toast.success(`Rule '${updatedRule.rule_name}' updated successfully.`);
@@ -129,17 +129,17 @@ const AgentRulesPage: React.FC = () => {
      if (!agentId) return;
      if (window.confirm(`Are you sure you want to delete rule ${ruleId}? This cannot be undone.`)) {
          try {
-            setError(null); 
+            setError(null);
             await apiClient.delete(`/agents/${agentId}/rules/${ruleId}`);
             console.info(`Successfully deleted rule ${ruleId} for agent ${agentId}`);
-            setRules(currentRules => 
+            setRules(currentRules =>
                 currentRules.filter(r => r.rule_id !== ruleId)
             );
             toast.success(`Rule ${ruleId} deleted successfully.`);
          } catch (err: any) {
              const errorMsg = err.response?.data?.detail || `Failed to delete rule ${ruleId}.`;
              console.error(`Failed to delete rule ${ruleId}:`, err);
-             setError(errorMsg); 
+             setError(errorMsg);
              toast.error(errorMsg);
          }
      }
@@ -148,21 +148,21 @@ const AgentRulesPage: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
        <Link to="/agents" className="text-sm text-blue-600 hover:underline mb-4 inline-block"> &larr; Back to Agents</Link>
-       
+
        <div className="border-b border-gray-200 pb-4 mb-4 flex justify-between items-center">
           <h1 className="text-xl font-semibold text-gray-800">Rules for Agent {agentName === 'Unknown Agent' ? agentId : agentName}</h1>
-          <button 
+          <button
             onClick={openAddRuleModal}
             className="px-4 py-2 border border-transparent bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 shadow disabled:opacity-50"
             disabled={!agentId}
          >
              Add Rule
-         </button> 
+         </button>
        </div>
-      
+
       {loading && <p className="text-gray-600 py-4 text-center">Loading rules...</p>}
       {error && !isAddRuleModalOpen && !isEditRuleModalOpen && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {!loading && (
         <div className="overflow-x-auto">
            <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
@@ -182,14 +182,14 @@ const AgentRulesPage: React.FC = () => {
                         <pre className="text-xs whitespace-pre-wrap font-mono bg-gray-100 p-2 rounded border border-gray-200">{JSON.stringify(rule.rule_config, null, 2)}</pre>
                      </td>
                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-1 align-top">
-                        <button 
+                        <button
                            onClick={() => openEditRuleModal(rule)}
                            className="px-2 py-1 text-xs border border-gray-300 bg-white text-gray-700 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-400 transition duration-150"
                            title="Edit Rule"
                         >
                            Edit
                         </button>
-                        <button 
+                        <button
                            onClick={() => handleDeleteRule(rule.rule_id)}
                            className="px-2 py-1 text-xs border border-red-500 bg-white text-red-600 rounded hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-red-400 transition duration-150"
                            title="Delete Rule"
@@ -227,4 +227,4 @@ const AgentRulesPage: React.FC = () => {
   );
 };
 
-export default AgentRulesPage; 
+export default AgentRulesPage;

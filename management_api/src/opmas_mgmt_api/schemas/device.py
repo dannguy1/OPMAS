@@ -1,7 +1,9 @@
-from pydantic import BaseModel, IPvAnyAddress, validator
-from typing import Optional, Dict, Any, List
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, IPvAnyAddress, validator
+
 
 class DeviceBase(BaseModel):
     hostname: str
@@ -9,14 +11,16 @@ class DeviceBase(BaseModel):
     device_type: str
     configuration: Optional[Dict[str, Any]] = None
 
-    @validator('hostname')
+    @validator("hostname")
     def validate_hostname(cls, v):
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid hostname format')
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid hostname format")
         return v
+
 
 class DeviceCreate(DeviceBase):
     pass
+
 
 class DeviceUpdate(BaseModel):
     hostname: Optional[str] = None
@@ -26,11 +30,12 @@ class DeviceUpdate(BaseModel):
     configuration: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
-    @validator('hostname')
+    @validator("hostname")
     def validate_hostname(cls, v):
-        if v is not None and not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid hostname format')
+        if v is not None and not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid hostname format")
         return v
+
 
 class DeviceInDB(DeviceBase):
     id: int
@@ -43,11 +48,13 @@ class DeviceInDB(DeviceBase):
     class Config:
         from_attributes = True
 
+
 class DeviceStatus(BaseModel):
     status: str
     last_seen: datetime
     is_active: bool
 
+
 class DeviceConfiguration(BaseModel):
     configuration: Dict[str, Any]
-    updated_at: datetime 
+    updated_at: datetime

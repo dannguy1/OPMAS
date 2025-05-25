@@ -23,7 +23,7 @@ const CoreConfigPage: React.FC = () => {
     setEditValues({}); // Reset edit values on fetch
     try {
       // API returns a single dictionary object
-      const response = await apiClient.get<CoreConfig>('/config/core'); 
+      const response = await apiClient.get<CoreConfig>('/config/core');
       setConfig(response.data || {});
       // Initialize edit values based on fetched config
       const initialEditValues: Record<string, string> = {};
@@ -59,7 +59,7 @@ const CoreConfigPage: React.FC = () => {
 
   const handleSave = async (key: string) => {
     if (!config) return;
-    
+
     // Remove or comment out the declaration of originalValue if present
     // const originalValue = config[key];
     const editedValueString = editValues[key];
@@ -73,19 +73,19 @@ const CoreConfigPage: React.FC = () => {
         newValue = editedValueString;
         console.warn(`Could not parse edited value for key '${key}' as JSON. Saving as string.`);
     }
-    
+
     // TODO: Implement PUT/POST call to /api/config/core to save the *entire* config or *individual* key
     // This requires backend implementation first.
     alert(`Saving ${key}=${JSON.stringify(newValue)} (API call not yet implemented)`);
-    
-    // --- Placeholder: Update local state as if save succeeded --- 
+
+    // --- Placeholder: Update local state as if save succeeded ---
     // Note: This is temporary. A real implementation would update after API success.
     setConfig(prevConfig => ({ ...prevConfig, [key]: newValue }));
     setEditMode(prev => ({ ...prev, [key]: false })); // Exit edit mode
-    // ---------------------------------------------------------- 
+    // ----------------------------------------------------------
 
     // Example API call structure (needs backend endpoint):
-    /* 
+    /*
     try {
       // Option 1: Update the whole config object
       // const updatedConfig = { ...config, [key]: newValue };
@@ -97,7 +97,7 @@ const CoreConfigPage: React.FC = () => {
       setConfig(prevConfig => ({ ...prevConfig, [key]: newValue }));
       setEditMode(prev => ({ ...prev, [key]: false }));
       // Add success notification
-      toast.success(`Configuration key '${key}' updated successfully.`); 
+      toast.success(`Configuration key '${key}' updated successfully.`);
     } catch (err: any) {
       console.error(`Failed to save config key ${key}:`, err);
       setError(`Failed to save ${key}.`);
@@ -105,7 +105,7 @@ const CoreConfigPage: React.FC = () => {
       // setEditValues(prev => ({ ...prev, [key]: JSON.stringify(originalValue) }));
       // Add error notification
       toast.error(`Failed to save configuration key '${key}'.`);
-    } 
+    }
     */
   };
 
@@ -123,7 +123,7 @@ const CoreConfigPage: React.FC = () => {
       {/* Loading/Error Messages (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading configuration...</p>}
       {error && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Table Section (inside card body) */}
       {!loading && !error && config && (
         <div className="overflow-x-auto">
@@ -161,15 +161,15 @@ const CoreConfigPage: React.FC = () => {
                     {editMode[key] ? (
                       <>
                         {/* Save Button - btn-outline-success btn-sm */}
-                        <button 
-                          onClick={() => handleSave(key)} 
+                        <button
+                          onClick={() => handleSave(key)}
                           className="px-2 py-1 text-xs rounded border border-green-500 bg-white text-green-600 hover:bg-green-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-green-400 transition duration-150"
                         >
                           Save
                         </button>
                         {/* Cancel Button - btn-outline-secondary btn-sm */}
-                        <button 
-                          onClick={() => handleEditToggle(key)} 
+                        <button
+                          onClick={() => handleEditToggle(key)}
                           className="px-2 py-1 text-xs border border-gray-300 bg-white text-gray-700 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-400 transition duration-150"
                         >
                           Cancel
@@ -177,8 +177,8 @@ const CoreConfigPage: React.FC = () => {
                       </>
                     ) : (
                       // Edit Button - btn-outline-primary btn-sm
-                    <button 
-                        onClick={() => handleEditToggle(key)} 
+                    <button
+                        onClick={() => handleEditToggle(key)}
                         className="px-2 py-1 text-xs border border-blue-500 bg-white text-blue-600 rounded hover:bg-blue-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-400 transition duration-150"
                     >
                         Edit
@@ -204,4 +204,4 @@ const CoreConfigPage: React.FC = () => {
   );
 };
 
-export default CoreConfigPage; 
+export default CoreConfigPage;

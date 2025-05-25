@@ -1,1 +1,1 @@
-"""OPMAS Management API package.""" 
+"""OPMAS Management API package."""

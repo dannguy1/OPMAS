@@ -57,7 +57,7 @@ component/
 2. Commit message format:
    ```
    type(scope): description
-   
+
    [optional body]
    [optional footer]
    ```
@@ -155,10 +155,10 @@ component/
    # Create virtual environment
    python -m venv venv
    source venv/bin/activate
-   
+
    # Install development dependencies
    pip install -r requirements-dev.txt
-   
+
    # Install pre-commit hooks
    pre-commit install
    ```
@@ -178,4 +178,4 @@ component/
 - [Python Style Guide](https://www.python.org/dev/peps/pep-0008/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/) 
+- [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/)

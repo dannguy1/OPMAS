@@ -265,4 +265,4 @@ alerts:
   - Planned growth
   - Seasonal patterns
   - Special events
-  - Maintenance windows 
+  - Maintenance windows

@@ -1,15 +1,17 @@
 """API dependencies."""
 
 from typing import AsyncGenerator, Optional
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+
 import nats.aio.client as nats
-from opmas_mgmt_api.db.session import async_session
+from fastapi import Depends, HTTPException, status
 from opmas_mgmt_api.core.config import settings
+from opmas_mgmt_api.db.session import async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get database session.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -19,9 +21,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
+
 async def get_nats() -> Optional[nats.Client]:
     """Get NATS client.
-    
+
     Returns:
         Optional[nats.Client]: NATS client instance
     """
@@ -32,5 +35,5 @@ async def get_nats() -> Optional[nats.Client]:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Failed to connect to NATS: {str(e)}"
+            detail=f"Failed to connect to NATS: {str(e)}",
         )

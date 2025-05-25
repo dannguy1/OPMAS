@@ -1,20 +1,21 @@
 """Configuration management service."""
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
-from sqlalchemy import select, update, delete
-from sqlalchemy.exc import IntegrityError
 
-from opmas_mgmt_api.models.configurations import Configuration, ConfigurationHistory
-from opmas_mgmt_api.schemas.configurations import ConfigurationCreate, ConfigurationUpdate
 from opmas_mgmt_api.core.exceptions import OPMASException
 from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.models.configurations import Configuration, ConfigurationHistory
+from opmas_mgmt_api.schemas.configurations import ConfigurationCreate, ConfigurationUpdate
+from sqlalchemy import delete, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 
 class ConfigurationService:
     """Configuration management service."""
-    
+
     def __init__(self, db: Session, nats: NATSManager):
         """Initialize service with database session and NATS manager."""
         self.db = db
@@ -26,7 +27,7 @@ class ConfigurationService:
         limit: int = 100,
         component: Optional[str] = None,
         component_id: Optional[UUID] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """List configurations with optional filtering."""
         query = select(Configuration)
@@ -48,17 +49,10 @@ class ConfigurationService:
         result = await self.db.execute(query)
         configurations = result.scalars().all()
 
-        return {
-            "items": configurations,
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
+        return {"items": configurations, "total": total, "skip": skip, "limit": limit}
 
     async def create_configuration(
-        self,
-        configuration: ConfigurationCreate,
-        created_by: Optional[str] = None
+        self, configuration: ConfigurationCreate, created_by: Optional[str] = None
     ) -> Configuration:
         """Create a new configuration."""
         try:
@@ -74,7 +68,7 @@ class ConfigurationService:
                 version=db_config.version,
                 configuration=db_config.configuration,
                 config_metadata=db_config.config_metadata,
-                created_by=created_by
+                created_by=created_by,
             )
             self.db.add(history)
             await self.db.commit()
@@ -87,17 +81,14 @@ class ConfigurationService:
                     "component": db_config.component,
                     "component_id": str(db_config.component_id) if db_config.component_id else None,
                     "version": db_config.version,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
             return db_config
         except IntegrityError as e:
             await self.db.rollback()
-            raise OPMASException(
-                status_code=400,
-                detail=f"Configuration creation failed: {str(e)}"
-            )
+            raise OPMASException(status_code=400, detail=f"Configuration creation failed: {str(e)}")
 
     async def get_configuration(self, configuration_id: UUID) -> Configuration:
         """Get configuration by ID."""
@@ -106,17 +97,14 @@ class ConfigurationService:
         )
         configuration = result.scalar_one_or_none()
         if not configuration:
-            raise OPMASException(
-                status_code=404,
-                detail="Configuration not found"
-            )
+            raise OPMASException(status_code=404, detail="Configuration not found")
         return configuration
 
     async def update_configuration(
         self,
         configuration_id: UUID,
         configuration: ConfigurationUpdate,
-        updated_by: Optional[str] = None
+        updated_by: Optional[str] = None,
     ) -> Configuration:
         """Update configuration."""
         db_config = await self.get_configuration(configuration_id)
@@ -133,7 +121,7 @@ class ConfigurationService:
                 version=db_config.version,
                 configuration=db_config.configuration,
                 config_metadata=db_config.config_metadata,
-                created_by=updated_by
+                created_by=updated_by,
             )
             self.db.add(history)
 
@@ -148,8 +136,8 @@ class ConfigurationService:
                 "component": db_config.component,
                 "component_id": str(db_config.component_id) if db_config.component_id else None,
                 "version": db_config.version,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
         return db_config
@@ -167,24 +155,23 @@ class ConfigurationService:
                 "configuration_id": str(configuration_id),
                 "component": db_config.component,
                 "component_id": str(db_config.component_id) if db_config.component_id else None,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+                "timestamp": datetime.utcnow().isoformat(),
+            },
         )
 
     async def get_configuration_history(
-        self,
-        configuration_id: UUID,
-        skip: int = 0,
-        limit: int = 100
+        self, configuration_id: UUID, skip: int = 0, limit: int = 100
     ) -> Dict[str, Any]:
         """Get configuration history."""
         # Verify configuration exists
         await self.get_configuration(configuration_id)
 
         # Get history entries
-        query = select(ConfigurationHistory).where(
-            ConfigurationHistory.configuration_id == configuration_id
-        ).order_by(ConfigurationHistory.created_at.desc())
+        query = (
+            select(ConfigurationHistory)
+            .where(ConfigurationHistory.configuration_id == configuration_id)
+            .order_by(ConfigurationHistory.created_at.desc())
+        )
 
         # Get total count
         total = len(await self.db.execute(query))
@@ -194,22 +181,14 @@ class ConfigurationService:
         result = await self.db.execute(query)
         history = result.scalars().all()
 
-        return {
-            "items": history,
-            "total": total,
-            "skip": skip,
-            "limit": limit
-        }
+        return {"items": history, "total": total, "skip": skip, "limit": limit}
 
     async def get_active_configuration(
-        self,
-        component: str,
-        component_id: Optional[UUID] = None
+        self, component: str, component_id: Optional[UUID] = None
     ) -> Configuration:
         """Get active configuration for a component."""
         query = select(Configuration).where(
-            Configuration.component == component,
-            Configuration.is_active == True
+            Configuration.component == component, Configuration.is_active == True
         )
 
         if component_id:
@@ -220,8 +199,7 @@ class ConfigurationService:
 
         if not configuration:
             raise OPMASException(
-                status_code=404,
-                detail=f"No active configuration found for component {component}"
+                status_code=404, detail=f"No active configuration found for component {component}"
             )
 
-        return configuration 
+        return configuration

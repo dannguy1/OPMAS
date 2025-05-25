@@ -45,7 +45,7 @@ const EditPlaybookStepModal: React.FC<EditPlaybookStepModalProps> = ({ isOpen, o
       setError('Action Type is required.');
       return;
     }
-    
+
     const trimmedDescription = description.trim() || undefined;
     const trimmedCommandTemplate = commandTemplate.trim() || undefined;
 
@@ -60,8 +60,8 @@ const EditPlaybookStepModal: React.FC<EditPlaybookStepModalProps> = ({ isOpen, o
 
     setIsSubmitting(true);
     try {
-      await onSubmit(stepToEdit.step_id, { 
-        action_type: actionType.trim(), 
+      await onSubmit(stepToEdit.step_id, {
+        action_type: actionType.trim(),
         description: trimmedDescription,
         command_template: trimmedCommandTemplate
       });
@@ -80,19 +80,19 @@ const EditPlaybookStepModal: React.FC<EditPlaybookStepModalProps> = ({ isOpen, o
   }
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" 
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div 
-        className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg" 
+      <div
+        className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Edit Playbook Step (ID: {stepToEdit.step_id})</h2>
-        
+
         <form onSubmit={handleSubmit}>
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-          
+
           {/* Fields are same as Add modal, just pre-filled */}
           <div className="mb-4">
             <label htmlFor="editStepActionType" className="block text-sm font-medium text-gray-700 mb-1">
@@ -158,4 +158,4 @@ const EditPlaybookStepModal: React.FC<EditPlaybookStepModalProps> = ({ isOpen, o
   );
 };
 
-export default EditPlaybookStepModal; 
+export default EditPlaybookStepModal;

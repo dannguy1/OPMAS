@@ -265,4 +265,4 @@ Response: Updated execution object
      - `action` field
 
 4. Execution Status:
-   - Must be one of: "pending", "running", "completed", "failed", "cancelled" 
+   - Must be one of: "pending", "running", "completed", "failed", "cancelled"

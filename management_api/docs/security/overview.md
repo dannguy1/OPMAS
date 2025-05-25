@@ -175,14 +175,14 @@ class RateLimiter:
     async def check_rate_limit(self, request: Request):
         client_ip = request.client.host
         key = f"rate_limit:{client_ip}"
-        
+
         current = self.redis.get(key)
         if current and int(current) >= self.requests_per_minute:
             raise HTTPException(
                 status_code=429,
                 detail="Too many requests"
             )
-        
+
         pipe = self.redis.pipeline()
         pipe.incr(key)
         pipe.expire(key, 60)
@@ -251,7 +251,7 @@ from ..database import Base
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     action = Column(String)
@@ -350,4 +350,4 @@ class AuditLog(Base):
 ### 3. Contact
 - Security Team: security@example.com
 - Emergency Contact: emergency@example.com
-- Compliance Officer: compliance@example.com 
+- Compliance Officer: compliance@example.com

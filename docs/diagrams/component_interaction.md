@@ -21,31 +21,31 @@ sequenceDiagram
     LogAPI->>Parser: Raw Log + Metadata
     Parser->>NATS: Parsed Log Event
     NATS->>Agent: Filtered Logs
-    
+
     %% Agent Processing
     Agent->>DB: Load Rules
     Agent->>Agent: Process Logs
     Agent->>NATS: Agent Finding
-    
+
     %% Orchestrator Processing
     NATS->>Orch: Agent Finding
     Orch->>DB: Load Playbooks
     Orch->>Orch: Evaluate Actions
     Orch->>DB: Store Finding
     Orch->>NATS: Action Command
-    
+
     %% Action Execution
     NATS->>Exec: Action Command
     Exec->>DB: Load Device Info
     Exec->>Device: SSH Command
     Device->>Exec: Command Result
     Exec->>NATS: Action Result
-    
+
     %% Management Flow
     UI->>Mgmt: HTTP Request
     Mgmt->>DB: Query/Update
     Mgmt->>UI: HTTP Response
-    
+
     %% Control Flow
     UI->>Mgmt: Control Command
     Mgmt->>LogAPI: Start/Stop

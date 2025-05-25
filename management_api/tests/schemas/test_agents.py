@@ -1,19 +1,20 @@
 """Test agent management schemas."""
 
-import pytest
 from datetime import datetime
 from uuid import UUID, uuid4
+
+import pytest
+from opmas_mgmt_api.schemas.agents import (
+    AgentConfig,
+    AgentCreate,
+    AgentDiscovery,
+    AgentList,
+    AgentResponse,
+    AgentStatus,
+    AgentUpdate,
+)
 from pydantic import ValidationError
 
-from opmas_mgmt_api.schemas.agents import (
-    AgentCreate,
-    AgentUpdate,
-    AgentResponse,
-    AgentList,
-    AgentStatus,
-    AgentConfig,
-    AgentDiscovery
-)
 
 @pytest.fixture
 def test_agent_create():
@@ -27,17 +28,15 @@ def test_agent_create():
         "status": "online",
         "enabled": True,
         "metadata": {"version": "1.0.0"},
-        "config": {"scan_interval": 300}
+        "config": {"scan_interval": 300},
     }
+
 
 @pytest.fixture
 def test_agent_update():
     """Create a test agent update payload."""
-    return {
-        "name": "updated-agent",
-        "status": "offline",
-        "metadata": {"version": "1.1.0"}
-    }
+    return {"name": "updated-agent", "status": "offline", "metadata": {"version": "1.1.0"}}
+
 
 @pytest.fixture
 def test_agent_response():
@@ -55,8 +54,9 @@ def test_agent_response():
         "config": {"scan_interval": 300},
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
-        "last_seen": datetime.utcnow().isoformat()
+        "last_seen": datetime.utcnow().isoformat(),
     }
+
 
 @pytest.fixture
 def test_agent_list():
@@ -76,7 +76,7 @@ def test_agent_list():
                 "config": {"scan_interval": 300},
                 "created_at": datetime.utcnow().isoformat(),
                 "updated_at": datetime.utcnow().isoformat(),
-                "last_seen": datetime.utcnow().isoformat()
+                "last_seen": datetime.utcnow().isoformat(),
             },
             {
                 "id": str(uuid4()),
@@ -91,13 +91,14 @@ def test_agent_list():
                 "config": {"scan_interval": 300},
                 "created_at": datetime.utcnow().isoformat(),
                 "updated_at": datetime.utcnow().isoformat(),
-                "last_seen": datetime.utcnow().isoformat()
-            }
+                "last_seen": datetime.utcnow().isoformat(),
+            },
         ],
         "total": 2,
         "skip": 0,
-        "limit": 100
+        "limit": 100,
     }
+
 
 @pytest.fixture
 def test_agent_status():
@@ -106,8 +107,9 @@ def test_agent_status():
         "status": "online",
         "last_seen": datetime.utcnow().isoformat(),
         "device_status": "healthy",
-        "details": {"reason": "startup"}
+        "details": {"reason": "startup"},
     }
+
 
 @pytest.fixture
 def test_agent_config():
@@ -116,8 +118,9 @@ def test_agent_config():
         "config": {"scan_interval": 300},
         "version": "1.0.0",
         "last_updated": datetime.utcnow().isoformat(),
-        "metadata": {"updated_by": "system"}
+        "metadata": {"updated_by": "system"},
     }
+
 
 @pytest.fixture
 def test_agent_discovery():
@@ -130,8 +133,9 @@ def test_agent_discovery():
         "ip_address": "192.168.1.100",
         "port": 8080,
         "status": "online",
-        "metadata": {"version": "1.0.0"}
+        "metadata": {"version": "1.0.0"},
     }
+
 
 def test_agent_create_validation(test_agent_create):
     """Test agent creation validation."""
@@ -146,6 +150,7 @@ def test_agent_create_validation(test_agent_create):
     assert agent.metadata == test_agent_create["metadata"]
     assert agent.config == test_agent_create["config"]
 
+
 def test_agent_create_validation_invalid():
     """Test agent creation validation with invalid data."""
     invalid_data = {
@@ -153,10 +158,11 @@ def test_agent_create_validation_invalid():
         "agent_type": "invalid",  # Invalid agent type
         "hostname": "test-agent.local",
         "ip_address": "invalid-ip",  # Invalid IP address
-        "port": 70000  # Invalid port
+        "port": 70000,  # Invalid port
     }
     with pytest.raises(ValidationError):
         AgentCreate(**invalid_data)
+
 
 def test_agent_update_validation(test_agent_update):
     """Test agent update validation."""
@@ -165,14 +171,13 @@ def test_agent_update_validation(test_agent_update):
     assert agent.status == test_agent_update["status"]
     assert agent.metadata == test_agent_update["metadata"]
 
+
 def test_agent_update_validation_invalid():
     """Test agent update validation with invalid data."""
-    invalid_data = {
-        "agent_type": "invalid",  # Invalid agent type
-        "port": 70000  # Invalid port
-    }
+    invalid_data = {"agent_type": "invalid", "port": 70000}  # Invalid agent type  # Invalid port
     with pytest.raises(ValidationError):
         AgentUpdate(**invalid_data)
+
 
 def test_agent_response_validation(test_agent_response):
     """Test agent response validation."""
@@ -188,6 +193,7 @@ def test_agent_response_validation(test_agent_response):
     assert agent.metadata == test_agent_response["metadata"]
     assert agent.config == test_agent_response["config"]
 
+
 def test_agent_list_validation(test_agent_list):
     """Test agent list validation."""
     agent_list = AgentList(**test_agent_list)
@@ -196,6 +202,7 @@ def test_agent_list_validation(test_agent_list):
     assert agent_list.skip == test_agent_list["skip"]
     assert agent_list.limit == test_agent_list["limit"]
 
+
 def test_agent_status_validation(test_agent_status):
     """Test agent status validation."""
     status = AgentStatus(**test_agent_status)
@@ -203,13 +210,13 @@ def test_agent_status_validation(test_agent_status):
     assert status.device_status == test_agent_status["device_status"]
     assert status.details == test_agent_status["details"]
 
+
 def test_agent_status_validation_invalid():
     """Test agent status validation with invalid data."""
-    invalid_data = {
-        "status": "invalid_status"  # Invalid status
-    }
+    invalid_data = {"status": "invalid_status"}  # Invalid status
     with pytest.raises(ValidationError):
         AgentStatus(**invalid_data)
+
 
 def test_agent_config_validation(test_agent_config):
     """Test agent config validation."""
@@ -217,6 +224,7 @@ def test_agent_config_validation(test_agent_config):
     assert config.config == test_agent_config["config"]
     assert config.version == test_agent_config["version"]
     assert config.metadata == test_agent_config["metadata"]
+
 
 def test_agent_discovery_validation(test_agent_discovery):
     """Test agent discovery validation."""
@@ -230,6 +238,7 @@ def test_agent_discovery_validation(test_agent_discovery):
     assert discovery.status == test_agent_discovery["status"]
     assert discovery.metadata == test_agent_discovery["metadata"]
 
+
 def test_agent_discovery_validation_invalid():
     """Test agent discovery validation with invalid data."""
     invalid_data = {
@@ -238,7 +247,7 @@ def test_agent_discovery_validation_invalid():
         "agent_type": "invalid",  # Invalid agent type
         "hostname": "test-agent.local",
         "ip_address": "invalid-ip",  # Invalid IP address
-        "port": 70000  # Invalid port
+        "port": 70000,  # Invalid port
     }
     with pytest.raises(ValidationError):
-        AgentDiscovery(**invalid_data) 
+        AgentDiscovery(**invalid_data)

@@ -1,14 +1,15 @@
 """Test device management models."""
 
-import pytest
 from datetime import datetime
 from uuid import UUID, uuid4
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from opmas_mgmt_api.models.devices import Device, DeviceStatusHistory
+import pytest
 from opmas_mgmt_api.db.base_class import Base
+from opmas_mgmt_api.models.devices import Device, DeviceStatusHistory
+from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
 
 @pytest.fixture
 def test_device():
@@ -25,8 +26,9 @@ def test_device():
         metadata={"location": "test-location"},
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
-        last_seen=datetime.utcnow()
+        last_seen=datetime.utcnow(),
     )
+
 
 @pytest.fixture
 def test_status_history(test_device):
@@ -36,8 +38,9 @@ def test_status_history(test_device):
         device_id=test_device.id,
         status="online",
         timestamp=datetime.utcnow(),
-        details={"action": "status_updated"}
+        details={"action": "status_updated"},
     )
+
 
 def test_device_creation(test_device):
     """Test device creation."""
@@ -53,6 +56,7 @@ def test_device_creation(test_device):
     assert test_device.created_at is not None
     assert test_device.updated_at is not None
     assert test_device.last_seen is not None
+
 
 def test_device_to_dict(test_device):
     """Test device to_dict method."""
@@ -70,6 +74,7 @@ def test_device_to_dict(test_device):
     assert device_dict["updated_at"] == test_device.updated_at.isoformat()
     assert device_dict["last_seen"] == test_device.last_seen.isoformat()
 
+
 def test_status_history_creation(test_status_history):
     """Test status history creation."""
     assert test_status_history.id is not None
@@ -77,6 +82,7 @@ def test_status_history_creation(test_status_history):
     assert test_status_history.status == "online"
     assert test_status_history.timestamp is not None
     assert test_status_history.details == {"action": "status_updated"}
+
 
 def test_status_history_to_dict(test_status_history):
     """Test status history to_dict method."""
@@ -87,12 +93,14 @@ def test_status_history_to_dict(test_status_history):
     assert history_dict["timestamp"] == test_status_history.timestamp.isoformat()
     assert history_dict["details"] == test_status_history.details
 
+
 def test_device_relationships(test_device, test_status_history):
     """Test device relationships."""
     test_device.status_history.append(test_status_history)
     assert len(test_device.status_history) == 1
     assert test_device.status_history[0].id == test_status_history.id
     assert test_status_history.device.id == test_device.id
+
 
 def test_device_indexes():
     """Test device indexes."""
@@ -104,43 +112,31 @@ def test_device_indexes():
     assert any(index.name == "ix_devices_enabled" for index in indexes)
     assert any(index.name == "ix_devices_agent_id" for index in indexes)
 
+
 def test_status_history_indexes():
     """Test status history indexes."""
     indexes = DeviceStatusHistory.__table_args__
     assert any(index.name == "ix_device_status_history_device_id" for index in indexes)
     assert any(index.name == "ix_device_status_history_timestamp" for index in indexes)
 
+
 def test_device_metadata_handling():
     """Test device metadata handling."""
-    metadata = {
-        "location": "test-location",
-        "owner": "test-owner",
-        "tags": ["test", "device"]
-    }
+    metadata = {"location": "test-location", "owner": "test-owner", "tags": ["test", "device"]}
     device = Device(
-        hostname="test-device",
-        ip_address="192.168.1.1",
-        device_type="router",
-        metadata=metadata
+        hostname="test-device", ip_address="192.168.1.1", device_type="router", metadata=metadata
     )
     assert device.metadata == metadata
     assert device.metadata["location"] == "test-location"
     assert device.metadata["owner"] == "test-owner"
     assert device.metadata["tags"] == ["test", "device"]
 
+
 def test_device_status_history_details_handling():
     """Test status history details handling."""
-    details = {
-        "action": "status_updated",
-        "previous_status": "offline",
-        "reason": "maintenance"
-    }
-    history = DeviceStatusHistory(
-        device_id=uuid4(),
-        status="online",
-        details=details
-    )
+    details = {"action": "status_updated", "previous_status": "offline", "reason": "maintenance"}
+    history = DeviceStatusHistory(device_id=uuid4(), status="online", details=details)
     assert history.details == details
     assert history.details["action"] == "status_updated"
     assert history.details["previous_status"] == "offline"
-    assert history.details["reason"] == "maintenance" 
+    assert history.details["reason"] == "maintenance"

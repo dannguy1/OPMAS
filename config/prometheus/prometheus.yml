@@ -17,4 +17,4 @@ scrape_configs:
 
   - job_name: 'nats'
     static_configs:
-      - targets: ['nats:8222'] 
+      - targets: ['nats:8222']

@@ -1,120 +1,131 @@
 # Defines Python data classes for the standardized JSON formats used in OPMAS.
 
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
+
 
 # Helper function to generate default UUIDs
 def default_uuid() -> str:
     return str(uuid4())
 
+
 # Helper function for current UTC timestamp
 def current_utc_iso() -> str:
     return datetime.utcnow().isoformat()
 
+
 @dataclass
 class ParsedLogEvent:
     """Represents the structured log event produced by the Log Parser (Section 3.1)"""
+
     event_id: str = field(default_factory=default_uuid)
-    arrival_ts_utc: str = field(default_factory=current_utc_iso) # Ingestor timestamp
+    arrival_ts_utc: str = field(default_factory=current_utc_iso)  # Ingestor timestamp
     source_ip: str = ""
-    original_ts: Optional[str] = None # Timestamp from log line (best effort)
-    hostname: Optional[str] = None    # Parsed or from source_ip lookup in KB
+    original_ts: Optional[str] = None  # Timestamp from log line (best effort)
+    hostname: Optional[str] = None  # Parsed or from source_ip lookup in KB
     process_name: Optional[str] = None
     pid: Optional[str] = None
-    log_level: Optional[str] = None   # Parsed or inferred
+    log_level: Optional[str] = None  # Parsed or inferred
     message: str = ""
-    parser_name: Optional[str] = None # Identifier for the parsing logic used
-    log_source_type: Optional[str] = None # Classification by parser (e.g., 'wifi', 'security')
-    structured_fields: Dict[str, Any] = field(default_factory=dict) # Optional, parser-specific enrichment
+    parser_name: Optional[str] = None  # Identifier for the parsing logic used
+    log_source_type: Optional[str] = None  # Classification by parser (e.g., 'wifi', 'security')
+    structured_fields: Dict[str, Any] = field(
+        default_factory=dict
+    )  # Optional, parser-specific enrichment
 
     def add_classification(self, rule_name: str, pattern: str):
         """Add a classification to the event."""
-        if 'classifications' not in self.structured_fields:
-            self.structured_fields['classifications'] = []
-        self.structured_fields['classifications'].append({
-            'rule_name': rule_name,
-            'pattern': pattern,
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        if "classifications" not in self.structured_fields:
+            self.structured_fields["classifications"] = []
+        self.structured_fields["classifications"].append(
+            {"rule_name": rule_name, "pattern": pattern, "timestamp": datetime.utcnow().isoformat()}
+        )
 
     def to_dict(self) -> dict:
         """Convert the event to a dictionary."""
         return {
-            'event_id': self.event_id,
-            'arrival_ts_utc': self.arrival_ts_utc,
-            'source_ip': self.source_ip,
-            'original_ts': self.original_ts,
-            'hostname': self.hostname,
-            'process_name': self.process_name,
-            'pid': self.pid,
-            'log_level': self.log_level,
-            'message': self.message,
-            'parser_name': self.parser_name,
-            'log_source_type': self.log_source_type,
-            'structured_fields': self.structured_fields
+            "event_id": self.event_id,
+            "arrival_ts_utc": self.arrival_ts_utc,
+            "source_ip": self.source_ip,
+            "original_ts": self.original_ts,
+            "hostname": self.hostname,
+            "process_name": self.process_name,
+            "pid": self.pid,
+            "log_level": self.log_level,
+            "message": self.message,
+            "parser_name": self.parser_name,
+            "log_source_type": self.log_source_type,
+            "structured_fields": self.structured_fields,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'ParsedLogEvent':
+    def from_dict(cls, data: dict) -> "ParsedLogEvent":
         """Create a ParsedLogEvent from a dictionary."""
         return cls(
-            event_id=data.get('event_id'),
-            arrival_ts_utc=data.get('arrival_ts_utc'),
-            source_ip=data.get('source_ip', ''),
-            original_ts=data.get('original_ts'),
-            hostname=data.get('hostname'),
-            process_name=data.get('process_name'),
-            pid=data.get('pid'),
-            log_level=data.get('log_level'),
-            message=data.get('message', ''),
-            parser_name=data.get('parser_name'),
-            log_source_type=data.get('log_source_type'),
-            structured_fields=data.get('structured_fields', {})
+            event_id=data.get("event_id"),
+            arrival_ts_utc=data.get("arrival_ts_utc"),
+            source_ip=data.get("source_ip", ""),
+            original_ts=data.get("original_ts"),
+            hostname=data.get("hostname"),
+            process_name=data.get("process_name"),
+            pid=data.get("pid"),
+            log_level=data.get("log_level"),
+            message=data.get("message", ""),
+            parser_name=data.get("parser_name"),
+            log_source_type=data.get("log_source_type"),
+            structured_fields=data.get("structured_fields", {}),
         )
+
 
 @dataclass
 class AgentFinding:
     """Represents a finding generated by a Domain Agent (Section 3.2)"""
+
     finding_id: str = field(default_factory=default_uuid)
     agent_name: str = ""
     finding_ts_utc: str = field(default_factory=current_utc_iso)
-    device_hostname: Optional[str] = None # Target device
+    device_hostname: Optional[str] = None  # Target device
     device_ip: Optional[str] = None
-    severity: str = "Info" # e.g., Info, Warning, Critical
-    finding_type: str = "UnknownFinding" # Unique identifier for the type of finding
+    severity: str = "Info"  # e.g., Info, Warning, Critical
+    finding_type: str = "UnknownFinding"  # Unique identifier for the type of finding
     description: str = ""
-    details: Dict[str, Any] = field(default_factory=dict) # Finding-specific structured data
-    evidence_event_ids: Optional[List[str]] = None # Optional: IDs of logs supporting this finding
+    details: Dict[str, Any] = field(default_factory=dict)  # Finding-specific structured data
+    evidence_event_ids: Optional[List[str]] = None  # Optional: IDs of logs supporting this finding
+
 
 @dataclass
 class ActionCommand:
     """Represents a command sent from the Orchestrator to the Action Executor (Section 3.3)"""
+
     action_id: str = field(default_factory=default_uuid)
     command_ts_utc: str = field(default_factory=current_utc_iso)
     device_hostname: str = ""
     device_ip: str = ""
-    action_type: str = "run_command" # e.g., run_command, get_config, restart_service
-    command: Optional[str] = None # The actual command or parameters
+    action_type: str = "run_command"  # e.g., run_command, get_config, restart_service
+    command: Optional[str] = None  # The actual command or parameters
     timeout_seconds: int = 30
-    originating_finding_id: Optional[str] = None # Optional: Finding that triggered this action
+    originating_finding_id: Optional[str] = None  # Optional: Finding that triggered this action
+
 
 @dataclass
 class ActionResult:
     """Represents the result of an action executed by the Action Executor (Section 3.4)"""
+
     result_id: str = field(default_factory=default_uuid)
-    action_id: str = "" # Corresponds to the Action Command
+    action_id: str = ""  # Corresponds to the Action Command
     result_ts_utc: str = field(default_factory=current_utc_iso)
     device_hostname: str = ""
-    status: str = "Unknown" # Success / Failed / Timeout
-    exit_code: Optional[int] = None # Command exit code
-    stdout: Optional[str] = None # Command output
-    stderr: Optional[str] = None # Command error output
-    error_message: Optional[str] = None # Description if status is Failed
+    status: str = "Unknown"  # Success / Failed / Timeout
+    exit_code: Optional[int] = None  # Command exit code
+    stdout: Optional[str] = None  # Command output
+    stderr: Optional[str] = None  # Command error output
+    error_message: Optional[str] = None  # Description if status is Failed
+
 
 # Example Usage (for illustration)
-if __name__ == '__main__':
+if __name__ == "__main__":
     log = ParsedLogEvent(
         source_ip="192.168.1.1",
         timestamp="2024-04-01T12:00:00",
@@ -124,8 +135,8 @@ if __name__ == '__main__':
         structured_fields={
             "interface": "wlan0",
             "mac_address": "aa:bb:cc:dd:ee:ff",
-            "event": "auth_success"
-        }
+            "event": "auth_success",
+        },
     )
     print("ParsedLogEvent Example:")
     print(log)
@@ -142,9 +153,9 @@ if __name__ == '__main__':
             "interface": "wlan0",
             "client_mac": "aa:bb:cc:dd:ee:ff",
             "failure_count": 25,
-            "time_window_seconds": 60
+            "time_window_seconds": 60,
         },
-        evidence_event_ids=[log.event_id]
+        evidence_event_ids=[log.event_id],
     )
     print("AgentFinding Example:")
     print(finding)
@@ -155,7 +166,7 @@ if __name__ == '__main__':
         device_ip="192.168.1.1",
         action_type="run_command",
         command="/usr/sbin/hostapd_cli -i wlan0 list_sta",
-        originating_finding_id=finding.finding_id
+        originating_finding_id=finding.finding_id,
     )
     print("ActionCommand Example:")
     print(command)
@@ -166,8 +177,8 @@ if __name__ == '__main__':
         device_hostname="OpenWRT-Router1",
         status="Success",
         exit_code=0,
-        stdout="aa:bb:cc:dd:ee:ff flags=[AUTH][ASSOC][AUTHORIZED]...\n..."
+        stdout="aa:bb:cc:dd:ee:ff flags=[AUTH][ASSOC][AUTHORIZED]...\n...",
     )
     print("ActionResult Example:")
     print(result)
-    print("---") 
+    print("---")

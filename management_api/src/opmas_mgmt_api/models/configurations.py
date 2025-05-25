@@ -1,16 +1,18 @@
 """Configuration management models."""
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlalchemy import Column, String, JSON, DateTime, ForeignKey, Boolean
+
+from opmas_mgmt_api.db.base_class import Base
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
-from opmas_mgmt_api.db.base_class import Base
 
 class Configuration(Base):
     """Configuration model."""
+
     __tablename__ = "configurations"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -26,7 +28,9 @@ class Configuration(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    history = relationship("ConfigurationHistory", back_populates="configuration", cascade="all, delete-orphan")
+    history = relationship(
+        "ConfigurationHistory", back_populates="configuration", cascade="all, delete-orphan"
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert model to dictionary."""
@@ -41,11 +45,13 @@ class Configuration(Base):
             "configuration": self.configuration,
             "metadata": self.config_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
 
 class ConfigurationHistory(Base):
     """Configuration history model."""
+
     __tablename__ = "configuration_history"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -68,5 +74,5 @@ class ConfigurationHistory(Base):
             "configuration": self.configuration,
             "metadata": self.config_metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "created_by": self.created_by
-        } 
+            "created_by": self.created_by,
+        }

@@ -471,4 +471,4 @@ Discover available agents in the system.
 
 - [OPMAS-DS.md](../specifications/OPMAS-DS.md): Main design specification
 - [ARCHITECTURE.md](../architecture/ARCHITECTURE.md): System architecture overview
-- [LOG_INGESTION_API.md](LOG_INGESTION_API.md): Detailed documentation for the Log Ingestion API 
+- [LOG_INGESTION_API.md](LOG_INGESTION_API.md): Detailed documentation for the Log Ingestion API

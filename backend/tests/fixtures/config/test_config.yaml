@@ -25,4 +25,4 @@ test:
   retry_attempts: 3
   cleanup: true
   parallel: true
-  max_workers: 4 
+  max_workers: 4

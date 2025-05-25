@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, JSON, DateTime, ForeignKey, Integer
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String
+
 from .base import Base
+
 
 class Log(Base):
     """Log model for storing system logs."""
+
     __tablename__ = "logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -16,4 +20,4 @@ class Log(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<Log(device_id='{self.device_id}', level='{self.level}', timestamp='{self.timestamp}')>" 
+        return f"<Log(device_id='{self.device_id}', level='{self.level}', timestamp='{self.timestamp}')>"

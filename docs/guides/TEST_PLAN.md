@@ -83,11 +83,11 @@ def test_agent_creation():
 def test_agent_management_flow():
     # Create agent through management API
     agent = create_agent_via_api(agent_data)
-    
+
     # Verify agent is registered in core backend
     core_agent = get_agent_from_core(agent.id)
     assert core_agent.status == "active"
-    
+
     # Test agent operations
     result = execute_agent_operation(agent.id)
     assert result.success == True
@@ -108,15 +108,15 @@ def test_agent_management_flow():
 def test_log_processing_workflow():
     # Send test log
     send_test_log(log_data)
-    
+
     # Verify log parsing
     parsed_log = get_parsed_log()
     assert parsed_log is not None
-    
+
     # Verify agent processing
     finding = get_agent_finding()
     assert finding.severity == "warning"
-    
+
     # Verify action execution
     action = get_executed_action()
     assert action.status == "completed"
@@ -138,11 +138,11 @@ def test_system_load():
     # Simulate multiple devices
     for i in range(100):
         send_log_from_device(f"device-{i}")
-    
+
     # Measure processing time
     processing_time = measure_processing_time()
     assert processing_time < 5.0  # seconds
-    
+
     # Verify system stability
     system_metrics = get_system_metrics()
     assert system_metrics.cpu_usage < 80
@@ -187,10 +187,10 @@ def db_session(test_db):
 class MockNATSServer:
     def __init__(self):
         self.messages = []
-    
+
     def publish(self, subject, message):
         self.messages.append((subject, message))
-    
+
     def subscribe(self, subject, callback):
         pass
 
@@ -339,4 +339,4 @@ python_functions = test_*
 7. Set up monitoring and alerts
 8. Implement automated test maintenance
 9. Create test documentation templates
-10. Set up test environment automation 
+10. Set up test environment automation

@@ -1,37 +1,48 @@
-# Use Python 3.10 slim image
-FROM python:3.10-slim
+# Build stage
+FROM python:3.10-slim as builder
 
-# Set working directory
 WORKDIR /app
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
-
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    postgresql-client \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy core package first
-COPY core /app/core
-
-# Install core package
-RUN pip install -e /app/core
-
-# Copy requirements first to leverage Docker cache
-COPY management_api/requirements.txt .
-
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
-# Copy the source code
-COPY management_api/src/ /app/
+# Final stage
+FROM python:3.10-slim
 
-# Expose the port the app runs on
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy wheels from builder
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements.txt .
+
+# Install Python packages
+RUN pip install --no-cache /wheels/*
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Expose port
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "opmas_mgmt_api.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Run the application
+CMD ["uvicorn", "opmas_mgmt_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

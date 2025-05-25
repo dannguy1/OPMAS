@@ -35,8 +35,8 @@ const AddPlaybookStepModal: React.FC<AddPlaybookStepModalProps> = ({ isOpen, onC
 
     setIsSubmitting(true);
     try {
-      await onSubmit({ 
-        action_type: actionType.trim(), 
+      await onSubmit({
+        action_type: actionType.trim(),
         description: description.trim() || undefined,
         command_template: commandTemplate.trim() || undefined
       });
@@ -55,19 +55,19 @@ const AddPlaybookStepModal: React.FC<AddPlaybookStepModalProps> = ({ isOpen, onC
   }
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" 
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg" // Slightly wider for command template
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Add New Playbook Step</h2>
-        
+
         <form onSubmit={handleSubmit}>
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-          
+
           <div className="mb-4">
             <label htmlFor="stepActionType" className="block text-sm font-medium text-gray-700 mb-1">
               Action Type <span className="text-red-500">*</span>
@@ -135,4 +135,4 @@ const AddPlaybookStepModal: React.FC<AddPlaybookStepModalProps> = ({ isOpen, onC
   );
 };
 
-export default AddPlaybookStepModal; 
+export default AddPlaybookStepModal;

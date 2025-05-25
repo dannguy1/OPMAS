@@ -100,4 +100,4 @@ You can also check the OpenWRT system log for confirmation or errors:
 *   **Firewall:** Ensure no firewall rules on the OpenWRT device or the OPMAS host machine are blocking the syslog traffic (UDP/514 or the configured TCP port).
 *   **Log Levels:** By default, OpenWRT might not log everything verbosely. You might need to adjust log levels for specific services (e.g., `hostapd`) in their respective configurations if you need more detailed logs for certain agent rules.
 *   **TCP/TLS:** For more reliable delivery, especially over less stable networks, TCP is preferred. For security, using `syslog-ng` with TLS encryption would be ideal, but this requires more setup on both OpenWRT and the OPMAS ingestor.
-*   **Resource Usage:** Continuously forwarding logs uses some network bandwidth and CPU resources on the OpenWRT device, though generally minimal. 
+*   **Resource Usage:** Continuously forwarding logs uses some network bandwidth and CPU resources on the OpenWRT device, though generally minimal.

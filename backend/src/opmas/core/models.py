@@ -1,11 +1,12 @@
+import enum
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, JSON, Enum
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import relationship
-import enum
+
+from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
 
 class Severity(enum.Enum):
     INFO = "info"
@@ -13,16 +14,19 @@ class Severity(enum.Enum):
     ERROR = "error"
     CRITICAL = "critical"
 
+
 class AgentStatus(enum.Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     ERROR = "error"
+
 
 class ActionStatus(enum.Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+
 
 class Device(Base):
     __tablename__ = "device_inventory"
@@ -41,6 +45,7 @@ class Device(Base):
     findings = relationship("Finding", back_populates="device")
     actions = relationship("Action", back_populates="device")
 
+
 class Agent(Base):
     __tablename__ = "agents"
 
@@ -54,6 +59,7 @@ class Agent(Base):
 
     rules = relationship("AgentRule", back_populates="agent")
     findings = relationship("Finding", back_populates="agent")
+
 
 class AgentRule(Base):
     __tablename__ = "agent_rules"
@@ -70,6 +76,7 @@ class AgentRule(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     agent = relationship("Agent", back_populates="rules")
+
 
 class Finding(Base):
     __tablename__ = "findings"
@@ -89,6 +96,7 @@ class Finding(Base):
     device = relationship("Device", back_populates="findings")
     actions = relationship("Action", back_populates="finding")
 
+
 class Playbook(Base):
     __tablename__ = "playbooks"
 
@@ -99,6 +107,7 @@ class Playbook(Base):
     enabled = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class Action(Base):
     __tablename__ = "intended_actions"
@@ -115,4 +124,4 @@ class Action(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     finding = relationship("Finding", back_populates="actions")
-    device = relationship("Device", back_populates="actions") 
+    device = relationship("Device", back_populates="actions")

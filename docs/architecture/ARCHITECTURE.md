@@ -184,7 +184,7 @@ graph LR
     MgmtAPI -- Controls Processes --> Core Backend Services;
 ```
 
-*(Note: Log API to Parser interaction might be via NATS or an internal queue depending on final implementation details)* 
+*(Note: Log API to Parser interaction might be via NATS or an internal queue depending on final implementation details)*
 
 ## 8. Action Executor (`core/src/opmas/action_executor.py`)
 
@@ -293,7 +293,7 @@ graph LR
     * **Dashboard:**
         * Real-time status display
         * Historical trends
-        * System configuration view 
+        * System configuration view
 
 ## 13. Integration Points and Dependencies
 
@@ -415,7 +415,7 @@ graph LR
     * Development logging
     * Debug tools
     * Performance profiling
-    * Error tracking 
+    * Error tracking
 
 ## 17. Component-Specific Implementation Details
 
@@ -641,4 +641,4 @@ graph LR
 - [OPMAS-DS.md](../specifications/OPMAS-DS.md): Main design specification
 - [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md): Database schema and data models
 - [DEVELOPMENT_SETUP.md](../guides/DEVELOPMENT_SETUP.md): Development environment setup
-- [API_DOCUMENTATION.md](../api/API_DOCUMENTATION.md): API reference 
+- [API_DOCUMENTATION.md](../api/API_DOCUMENTATION.md): API reference

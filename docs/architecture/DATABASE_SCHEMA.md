@@ -253,4 +253,4 @@ CREATE INDEX idx_playbook_steps_playbook_id ON playbook_steps(playbook_id);
 2. **Health Checks**
    - Connection pool status
    - Replication lag
-   - Disk space usage 
+   - Disk space usage

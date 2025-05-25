@@ -15,7 +15,7 @@ body {
   line-height: 1.5; /* Added back */
   font-weight: 400; /* Added back */
   /* Default text color can be set by Tailwind base or here if needed */
-  /* color: #213547; */ /* Example for light mode */ 
+  /* color: #213547; */ /* Example for light mode */
 }
 
 /* Removed default link styles - let Tailwind handle */
@@ -39,7 +39,7 @@ h1 {
 */
 
 /* Removed conflicting default button styles */
-/* 
+/*
 button {
   border-radius: 8px;
   border: 1px solid transparent;

@@ -47,7 +47,7 @@ const AgentsPage: React.FC = () => {
       setError(null);
       try {
         const response = await apiClient.get<AgentsApiResponse>(
-            '/agents', 
+            '/agents',
             { params: { limit: 50, offset: 0 } } // Fetch initial page
         );
         setAgents(response.data.agents || []);
@@ -71,8 +71,8 @@ const AgentsPage: React.FC = () => {
     const originalAgents = [...agents]; // Store original state for potential revert on error
 
     // Optimistically update UI
-    setAgents(prevAgents => 
-        prevAgents.map(agent => 
+    setAgents(prevAgents =>
+        prevAgents.map(agent =>
             agent.agent_id === agentId ? { ...agent, is_enabled: newStatus } : agent
         )
     );
@@ -107,10 +107,10 @@ const AgentsPage: React.FC = () => {
   const handleAgentAdded = (newAgent: Agent) => {
     setAgents(prevAgents => [...prevAgents, newAgent]);
     // Optionally: Could also re-fetch the entire list if needed
-    // fetchAgents(); 
+    // fetchAgents();
   };
 
-  // --- Discovery Functions --- 
+  // --- Discovery Functions ---
   const fetchDiscoveredAgents = async () => {
       setDiscovering(true);
       setDiscoveryError(null);
@@ -119,16 +119,16 @@ const AgentsPage: React.FC = () => {
           console.log('Fetching discovered agents...');
           const response = await apiClient.get<DiscoveredAgent[]>('/agents/discover');
           console.log('Discovered agents response:', response.data);
-          
+
           // Filter out already added agents
-          const filteredAgents = response.data.filter(discovered => 
+          const filteredAgents = response.data.filter(discovered =>
               !agents.some(existing => existing.module_path === discovered.package_path)
           );
           console.log('Filtered discovered agents:', filteredAgents);
-          
+
           setDiscoveredAgents(filteredAgents);
           if (filteredAgents.length === 0) {
-              setDiscoveryError(response.data.length === 0 
+              setDiscoveryError(response.data.length === 0
                   ? "No new agent modules found in the filesystem."
                   : "All discovered agents have already been added.");
           }
@@ -145,7 +145,7 @@ const AgentsPage: React.FC = () => {
   const handleAddDiscovered = async (agent: DiscoveredAgent) => {
       try {
           console.log('Adding discovered agent:', agent);
-          
+
           // Ensure all required fields are present
           if (!agent.name || !agent.package_path) {
               throw new Error('Missing required fields from discovered agent');
@@ -161,13 +161,13 @@ const AgentsPage: React.FC = () => {
           console.log('Sending payload to create agent:', payload);
           const response = await apiClient.post<Agent>('/agents', payload);
           console.log('Create agent response:', response.data);
-          
+
           handleAgentAdded(response.data);
           toast.success(`Agent '${response.data.name}' added successfully.`);
-          
+
           // Remove the added agent from discovered list
           setDiscoveredAgents(prev => prev.filter(a => a.package_path !== agent.package_path));
-          
+
           // Update discovery message if no more agents
           if (discoveredAgents.length <= 1) {
               setDiscoveryError("All discovered agents have been added.");
@@ -197,7 +197,7 @@ const AgentsPage: React.FC = () => {
           toast.error(errorMsg);
       }
   };
-  // ------------------------- 
+  // -------------------------
 
   // Function to open the edit modal
   const handleEditAgent = (agent: Agent) => {
@@ -207,8 +207,8 @@ const AgentsPage: React.FC = () => {
 
   // Callback function for the edit modal to update the agent in the list
   const handleAgentUpdated = (updatedAgent: Agent) => {
-    setAgents(prevAgents => 
-        prevAgents.map(agent => 
+    setAgents(prevAgents =>
+        prevAgents.map(agent =>
             agent.agent_id === updatedAgent.agent_id ? updatedAgent : agent
         )
     );
@@ -248,7 +248,7 @@ const AgentsPage: React.FC = () => {
       {/* Mimic Bootstrap card-header: border-b pb-4 mb-4 flex justify-between items-center */}
       <div className="border-b border-gray-200 pb-4 mb-4 flex justify-between items-center">
         {/* Title style from card-header */}
-        <h1 className="text-xl font-semibold text-gray-800">Agents</h1> 
+        <h1 className="text-xl font-semibold text-gray-800">Agents</h1>
         <div className="flex space-x-3">
           {/* Primary button style from btn btn-primary */}
           <button
@@ -259,7 +259,7 @@ const AgentsPage: React.FC = () => {
             Add Agent
           </button>
           {/* Secondary button style from btn btn-outline-secondary (more or less) */}
-          <button 
+          <button
               onClick={fetchDiscoveredAgents}
               disabled={discovering}
               className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 shadow-sm disabled:opacity-50"
@@ -268,11 +268,11 @@ const AgentsPage: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Loading/Error Messages (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading agents...</p>}
       {error && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Table Section (inside card body) */}
       {!loading && !error && (
         <div className="overflow-x-auto">
@@ -313,9 +313,9 @@ const AgentsPage: React.FC = () => {
                         <button
                             title={agent.is_enabled ? 'Disable Agent' : 'Enable Agent'}
                             onClick={() => handleToggleEnable(agent.agent_id, agent.is_enabled)}
-                            className={`px-2 py-1 text-xs rounded border transition duration-150 focus:outline-none focus:ring-1 focus:ring-offset-1 
-                              ${agent.is_enabled 
-                                ? 'border-yellow-500 bg-white text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-400' 
+                            className={`px-2 py-1 text-xs rounded border transition duration-150 focus:outline-none focus:ring-1 focus:ring-offset-1
+                              ${agent.is_enabled
+                                ? 'border-yellow-500 bg-white text-yellow-600 hover:bg-yellow-50 focus:ring-yellow-400'
                                 : 'border-green-500 bg-white text-green-600 hover:bg-green-50 focus:ring-green-400'
                               }`}
                         >
@@ -363,7 +363,7 @@ const AgentsPage: React.FC = () => {
                     {discoveredAgents.map((agent, index) => (
                         <li key={`${agent.package_path}-${index}`} className="text-sm">
                             <span className="font-medium font-mono">{agent.name}</span> ({agent.package_path})
-                            <button 
+                            <button
                                 onClick={() => handleAddDiscovered(agent)}
                                 className="ml-3 px-2 py-0.5 text-xs border border-green-700 bg-green-600 hover:bg-green-700 text-white rounded focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-green-500 transition duration-150"
                             >
@@ -377,10 +377,10 @@ const AgentsPage: React.FC = () => {
       )}
 
       {/* Modals */}
-      <AddAgentModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        onAgentAdded={handleAgentAdded} 
+      <AddAgentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAgentAdded={handleAgentAdded}
       />
       <EditAgentModal
         isOpen={isEditModalOpen}
@@ -396,4 +396,4 @@ const AgentsPage: React.FC = () => {
   );
 };
 
-export default AgentsPage; 
+export default AgentsPage;

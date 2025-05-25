@@ -156,7 +156,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    ```bash
    # Check pod logs
    kubectl logs -n opmas deploy/opmas-management-api
-   
+
    # Check pod events
    kubectl describe pod -n opmas -l app=opmas-management-api
    ```
@@ -165,7 +165,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    ```bash
    # Check database pod
    kubectl logs -n opmas deploy/postgres
-   
+
    # Test database connection
    kubectl exec -n opmas deploy/opmas-management-api -- python -c "from opmas_mgmt_api.database import get_db; next(get_db())"
    ```
@@ -175,7 +175,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    # Check Prometheus targets
    kubectl port-forward svc/prometheus-operated 9090:9090 -n monitoring
    # Access http://localhost:9090/targets
-   
+
    # Check Grafana data source
    kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
    # Access http://localhost:3000/datasources
@@ -189,7 +189,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    ```bash
    # Update Python dependencies
    pip-compile requirements.in
-   
+
    # Rebuild and deploy
    docker build -t opmas-management-api:latest .
    kubectl rollout restart deploy/opmas-management-api -n opmas
@@ -205,7 +205,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    ```bash
    # Check certificate status
    kubectl get certificate -n opmas
-   
+
    # Force certificate renewal
    kubectl delete secret opmas-tls -n opmas
    ```
@@ -228,7 +228,7 @@ kubectl get configmap,secret -n opmas -o yaml > config-backup.yaml
    ```bash
    # Update base image
    docker build --no-cache -t opmas-management-api:latest .
-   
+
    # Deploy updates
    kubectl rollout restart deploy/opmas-management-api -n opmas
-   ``` 
+   ```

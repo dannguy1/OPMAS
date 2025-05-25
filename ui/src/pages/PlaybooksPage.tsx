@@ -47,7 +47,7 @@ const PlaybooksPage: React.FC = () => {
     setError(null);
     try {
       const response = await apiClient.get<PlaybooksApiResponse>(
-          '/playbooks', 
+          '/playbooks',
           { params: { limit: 50, offset: 0 } } // Fetch initial page
       );
       setPlaybooks(response.data.playbooks || []);
@@ -94,7 +94,7 @@ const PlaybooksPage: React.FC = () => {
       console.error("Failed to add playbook:", err);
       toast.error(errorMsg);
       // Throw error so modal can display it
-      throw new Error(errorMsg); 
+      throw new Error(errorMsg);
     } finally {
       // setLoading(false);
     }
@@ -105,8 +105,8 @@ const PlaybooksPage: React.FC = () => {
     try {
       const response = await apiClient.put<Playbook>(`/playbooks/${Number(playbookId)}`, updatedPlaybookData);
       const updatedPlaybook = response.data;
-      setPlaybooks(currentPlaybooks => 
-          currentPlaybooks.map(pb => 
+      setPlaybooks(currentPlaybooks =>
+          currentPlaybooks.map(pb =>
               pb.playbook_id === updatedPlaybook.playbook_id ? updatedPlaybook : pb
           )
       );
@@ -117,7 +117,7 @@ const PlaybooksPage: React.FC = () => {
       const errorMsg = err.response?.data?.detail || `Failed to update playbook ${playbookId}.`;
       console.error(`Failed to update playbook ${playbookId}:`, err);
       toast.error(errorMsg);
-      throw new Error(errorMsg); 
+      throw new Error(errorMsg);
     }
   };
 
@@ -127,14 +127,14 @@ const PlaybooksPage: React.FC = () => {
             setError(null); // Clear previous errors
             await apiClient.delete(`/playbooks/${playbookId}`);
             console.info(`Successfully deleted playbook ${playbookId}`);
-            setPlaybooks(currentPlaybooks => 
+            setPlaybooks(currentPlaybooks =>
                 currentPlaybooks.filter(pb => pb.playbook_id !== playbookId)
             );
             toast.success(`Playbook ${playbookId} deleted successfully.`);
          } catch (err: any) {
              const errorMsg = err.response?.data?.detail || `Failed to delete playbook ${playbookId}.`;
              console.error(`Failed to delete playbook ${playbookId}:`, err);
-             setError(errorMsg); 
+             setError(errorMsg);
              toast.error(errorMsg);
          }
      }
@@ -148,20 +148,20 @@ const PlaybooksPage: React.FC = () => {
       <div className="border-b border-gray-200 pb-4 mb-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold text-gray-800">Playbook Management</h1>
         {/* Update button to open modal */}
-        <button 
-            onClick={openAddModal} 
+        <button
+            onClick={openAddModal}
             className="px-4 py-2 border border-transparent bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 shadow disabled:opacity-50"
             disabled={loading} // Keep disabled while page is initially loading
          >
             Add Playbook
          </button>
       </div>
-      
+
       {/* Loading/Error Messages (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading playbooks...</p>}
       {/* Display page-level error only if not related to modals */}
       {error && !isAddModalOpen && !isEditModalOpen && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Table Section (inside card body) */}
       {!loading && (
         <div className="overflow-x-auto">
@@ -193,16 +193,16 @@ const PlaybooksPage: React.FC = () => {
                      <td className="px-4 py-3 text-sm text-gray-500 border-r border-gray-200">{playbook.description || 'N/A'}</td>
                      {/* Use outline buttons for actions */}
                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-1">
-                        {/* Update Edit button to open modal */} 
-                        <button 
-                           onClick={() => openEditModal(playbook)} 
+                        {/* Update Edit button to open modal */}
+                        <button
+                           onClick={() => openEditModal(playbook)}
                            className="px-2 py-1 text-xs border border-gray-300 bg-white text-gray-700 rounded hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-400 transition duration-150"
                            title="Edit Playbook Metadata"
                         >
                            Edit
                         </button>
                         {/* Delete Button - btn-outline-danger btn-sm */}
-                        <button 
+                        <button
                            onClick={() => handleDeletePlaybook(playbook.playbook_id)}
                            className="px-2 py-1 text-xs border border-red-500 bg-white text-red-600 rounded hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-red-400 transition duration-150"
                            title="Delete Playbook"
@@ -222,9 +222,9 @@ const PlaybooksPage: React.FC = () => {
            </table>
         </div>
       )}
-      
+
       {/* Render Modals */}
-      <AddPlaybookModal 
+      <AddPlaybookModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddSubmit}
@@ -240,4 +240,4 @@ const PlaybooksPage: React.FC = () => {
   );
 };
 
-export default PlaybooksPage; 
+export default PlaybooksPage;

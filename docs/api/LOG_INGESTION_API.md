@@ -311,4 +311,3 @@ except json.JSONDecodeError:
 *   **Statistics Time Range:** When querying statistics, ensure the time range is reasonable. Very large time ranges may result in slower response times.
 *   **Status Monitoring:** Use the status endpoint to monitor the health of the log ingestion service and its connection to NATS.
 *   **Source Tracking:** The API maintains statistics about log sources, including the number of logs received from each source and when they were first and last seen.
- 

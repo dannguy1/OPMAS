@@ -15,7 +15,7 @@ function App() {
   return (
     <>
       {/* --- Add Toaster component here --- */}
-      <Toaster 
+      <Toaster
         position="top-right"
         reverseOrder={false}
         toastOptions={{
@@ -55,16 +55,16 @@ function App() {
           <Route path="playbooks/:playbookId/steps" element={<PlaybookStepsPage />} /> { /* Route for specific playbook steps */}
           {/* Define other routes as children here */}
           {/* Example: <Route path="agents" element={<AgentsPage />} /> */}
-          
+
           {/* Fallback for unknown paths *within* the layout */}
-          <Route path="*" element={<div>Page Not Found Inside Layout</div>} /> 
+          <Route path="*" element={<div>Page Not Found Inside Layout</div>} />
         </Route>
 
         {/* Add other top-level routes here if needed (e.g., for a login page without the main layout) */}
         {/* <Route path="/login" element={<LoginPage />} /> */}
 
         {/* Fallback for unknown paths *outside* the layout */}
-        {/* Optional: You might want a different not-found for routes not matching the layout path */} 
+        {/* Optional: You might want a different not-found for routes not matching the layout path */}
         {/* <Route path="*" element={<div>Resource Not Found</div>} /> */}
       </Routes>
     </>

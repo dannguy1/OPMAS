@@ -333,4 +333,4 @@ ui/
 * User authentication and role-based access
 * GraphQL API support
 * Bulk operations
-* API versioning strategy 
+* API versioning strategy

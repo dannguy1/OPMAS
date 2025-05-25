@@ -2,24 +2,26 @@
 
 """Tests for the SystemAgent class."""
 
-import pytest
 import time
+from collections import deque
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from collections import deque
+
+import pytest
 
 from opmas.agents.system_agent_package.agent import SystemAgent
-from opmas.data_models import ParsedLogEvent, AgentFinding
+from opmas.data_models import AgentFinding, ParsedLogEvent
+
 
 @pytest.fixture
 def system_agent():
     """Create a SystemAgent instance with a mock NATS client."""
-    with patch('opmas.agents.system_agent_package.agent.BaseAgent.__init__') as mock_init:
+    with patch("opmas.agents.system_agent_package.agent.BaseAgent.__init__") as mock_init:
         mock_init.return_value = None
         agent = SystemAgent(
             agent_name="SystemAgent",
             subscribed_topics=["logs.system"],
-            findings_topic="findings.system"
+            findings_topic="findings.system",
         )
         agent.nats_client = AsyncMock()
         agent.publish_finding = AsyncMock()
@@ -30,7 +32,7 @@ def system_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "MemoryIssues": {
                 "enabled": True,
@@ -38,7 +40,7 @@ def system_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 3,
-                "severity": "High"
+                "severity": "High",
             },
             "ProcessIssues": {
                 "enabled": True,
@@ -46,7 +48,7 @@ def system_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "High"
+                "severity": "High",
             },
             "ConfigurationIssues": {
                 "enabled": True,
@@ -54,11 +56,12 @@ def system_agent():
                 "time_window_seconds": 300,
                 "finding_cooldown_seconds": 600,
                 "occurrence_threshold": 1,
-                "severity": "Medium"
-            }
+                "severity": "Medium",
+            },
         }
         agent._initialize_state()
         return agent
+
 
 @pytest.fixture
 def cpu_log_event():
@@ -68,8 +71,9 @@ def cpu_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="CPU usage high: 95%"
+        message="CPU usage high: 95%",
     )
+
 
 @pytest.fixture
 def memory_log_event():
@@ -79,8 +83,9 @@ def memory_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Memory usage high: 90%"
+        message="Memory usage high: 90%",
     )
+
 
 @pytest.fixture
 def process_log_event():
@@ -90,8 +95,9 @@ def process_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="Process error: zombie"
+        message="Process error: zombie",
     )
+
 
 @pytest.fixture
 def config_log_event():
@@ -101,8 +107,9 @@ def config_log_event():
         timestamp=datetime.now(),
         hostname="test-host",
         source_ip="192.168.1.1",
-        message="System config error: invalid_parameter"
+        message="System config error: invalid_parameter",
     )
+
 
 def test_initialize_state(system_agent):
     """Test initialization of state variables."""
@@ -110,25 +117,27 @@ def test_initialize_state(system_agent):
     assert isinstance(system_agent.memory_timestamps, dict)
     assert isinstance(system_agent.process_timestamps, dict)
     assert isinstance(system_agent.config_timestamps, dict)
-    
+
     assert isinstance(system_agent.recent_cpu_findings, dict)
     assert isinstance(system_agent.recent_memory_findings, dict)
     assert isinstance(system_agent.recent_process_findings, dict)
     assert isinstance(system_agent.recent_config_findings, dict)
 
+
 def test_compile_rule_patterns(system_agent):
     """Test compilation of rule patterns."""
     system_agent._compile_rule_patterns()
-    
+
     assert "CPUIssues" in system_agent.compiled_patterns
     assert "MemoryIssues" in system_agent.compiled_patterns
     assert "ProcessIssues" in system_agent.compiled_patterns
     assert "ConfigurationIssues" in system_agent.compiled_patterns
-    
+
     for rule_name, patterns in system_agent.compiled_patterns.items():
         assert len(patterns) > 0
         for pattern in patterns:
-            assert hasattr(pattern, 'search')
+            assert hasattr(pattern, "search")
+
 
 @pytest.mark.asyncio
 async def test_check_cpu_issues(system_agent, cpu_log_event):
@@ -136,7 +145,7 @@ async def test_check_cpu_issues(system_agent, cpu_log_event):
     # Add multiple CPU issues to trigger threshold
     for _ in range(3):
         await system_agent._check_cpu_issues(cpu_log_event)
-    
+
     # Verify finding was published
     system_agent.publish_finding.assert_called_once()
     finding = system_agent.publish_finding.call_args[0][0]
@@ -147,13 +156,14 @@ async def test_check_cpu_issues(system_agent, cpu_log_event):
     assert finding.details["cpu_issues"] == ["95%"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_memory_issues(system_agent, memory_log_event):
     """Test detection of memory issues."""
     # Add multiple memory issues to trigger threshold
     for _ in range(3):
         await system_agent._check_memory_issues(memory_log_event)
-    
+
     # Verify finding was published
     system_agent.publish_finding.assert_called_once()
     finding = system_agent.publish_finding.call_args[0][0]
@@ -164,11 +174,12 @@ async def test_check_memory_issues(system_agent, memory_log_event):
     assert finding.details["memory_issues"] == ["90%"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_process_issues(system_agent, process_log_event):
     """Test detection of process issues."""
     await system_agent._check_process_issues(process_log_event)
-    
+
     # Verify finding was published
     system_agent.publish_finding.assert_called_once()
     finding = system_agent.publish_finding.call_args[0][0]
@@ -179,11 +190,12 @@ async def test_check_process_issues(system_agent, process_log_event):
     assert finding.details["process_issues"] == ["zombie"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_check_configuration_issues(system_agent, config_log_event):
     """Test detection of configuration issues."""
     await system_agent._check_configuration_issues(config_log_event)
-    
+
     # Verify finding was published
     system_agent.publish_finding.assert_called_once()
     finding = system_agent.publish_finding.call_args[0][0]
@@ -194,14 +206,15 @@ async def test_check_configuration_issues(system_agent, config_log_event):
     assert finding.details["config_issues"] == ["invalid_parameter"]
     assert finding.details["hostname"] == "test-host"
 
+
 @pytest.mark.asyncio
 async def test_process_log_event(system_agent, cpu_log_event):
     """Test processing of log events."""
     # Add multiple CPU issues to trigger threshold
     for _ in range(3):
         await system_agent.process_log_event(cpu_log_event)
-    
+
     # Verify finding was published
     system_agent.publish_finding.assert_called_once()
     finding = system_agent.publish_finding.call_args[0][0]
-    assert finding.finding_type == "CPUIssues" 
+    assert finding.finding_type == "CPUIssues"

@@ -42,7 +42,7 @@ const IntendedActionsPage: React.FC = () => {
       try {
         // Fetch from the correct /actions endpoint
         const response = await apiClient.get<ActionsApiResponse>(
-            '/actions', 
+            '/actions',
             { params: { limit: 50, offset: 0 } } // Add pagination params
         );
         setActions(response.data.actions || []);
@@ -75,7 +75,7 @@ const IntendedActionsPage: React.FC = () => {
       {/* Loading/Error Messages (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading actions...</p>}
       {error && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Table Section (inside card body) */}
       {!loading && !error && (
         <div className="overflow-x-auto">
@@ -119,4 +119,4 @@ const IntendedActionsPage: React.FC = () => {
   );
 };
 
-export default IntendedActionsPage; 
+export default IntendedActionsPage;

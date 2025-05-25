@@ -33,7 +33,7 @@ const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, 
   };
 
   const handlePatternChange = (index: number, value: string) => {
-    setClassificationPatterns(patterns => 
+    setClassificationPatterns(patterns =>
       patterns.map((pattern, i) => i === index ? value : pattern)
     );
   };
@@ -61,8 +61,8 @@ const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, 
 
     setIsSubmitting(true);
     try {
-      await onSubmit({ 
-        rule_name: ruleName.trim(), 
+      await onSubmit({
+        rule_name: ruleName.trim(),
         rule_config: ruleConfig
       });
     } catch (err: any) {
@@ -161,4 +161,4 @@ const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, 
   );
 };
 
-export default AddAgentRuleModal; 
+export default AddAgentRuleModal;

@@ -284,4 +284,4 @@ pg_restore -U opmas -d opmas_test /opt/opmas/backups/latest.sql
 ### Contact
 - Technical Support: support@example.com
 - Emergency Contact: emergency@example.com
-- Security Team: security@example.com 
+- Security Team: security@example.com

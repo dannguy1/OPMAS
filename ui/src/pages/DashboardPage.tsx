@@ -81,7 +81,7 @@ const DashboardPage: React.FC = () => {
         <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
         <div className="space-x-2">
           {/* Style buttons like btn-outline-secondary btn-sm but with color hints */}
-          <button 
+          <button
             onClick={handleStart}
             disabled={actionLoading === 'start'}
             title="Start OPMAS System"
@@ -89,7 +89,7 @@ const DashboardPage: React.FC = () => {
           >
             {actionLoading === 'start' ? 'Starting...' : 'Start System'}
           </button>
-          <button 
+          <button
             onClick={handleStop}
             disabled={actionLoading === 'stop'}
             title="Stop OPMAS System"
@@ -103,7 +103,7 @@ const DashboardPage: React.FC = () => {
       {/* Loading/Error state (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading system status...</p>}
       {error && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Status Sections (inside card body) */}
       {!loading && !error && status && (
         // Use simple divs for sections for now, consider grid later if needed
@@ -147,4 +147,4 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-export default DashboardPage; 
+export default DashboardPage;

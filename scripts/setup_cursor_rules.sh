@@ -120,4 +120,4 @@ chmod +x .git/hooks/pre-commit
 echo "Cursor rules setup complete!"
 echo "Please review the rules in .cursor/rules/CURSOR_RULES.md"
 echo "Initial checkpoint and implementation log have been created"
-echo "Git hooks have been set up for automatic checkpoint creation" 
+echo "Git hooks have been set up for automatic checkpoint creation"

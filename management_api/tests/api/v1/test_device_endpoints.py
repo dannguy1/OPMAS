@@ -1,19 +1,20 @@
 """Test device management endpoints."""
 
-import pytest
-from uuid import uuid4
-from datetime import datetime
-from unittest.mock import AsyncMock, patch, MagicMock
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
 import asyncio
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
+import pytest
+from fastapi.testclient import TestClient
+from opmas_mgmt_api.core.exceptions import OPMASException
+from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.main import app
 from opmas_mgmt_api.models.devices import Device
-from opmas_mgmt_api.schemas.devices import DeviceCreate, DeviceUpdate, DeviceStatus
-from opmas_mgmt_api.core.nats import NATSManager
-from opmas_mgmt_api.core.exceptions import OPMASException
+from opmas_mgmt_api.schemas.devices import DeviceCreate, DeviceStatus, DeviceUpdate
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 @pytest.fixture
 def test_device():
@@ -28,8 +29,9 @@ def test_device():
         status="active",
         enabled=True,
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
     )
+
 
 @pytest.fixture
 def mock_nats():
@@ -38,11 +40,13 @@ def mock_nats():
     nats.publish = AsyncMock()
     return nats
 
+
 @pytest.fixture
 def client(mock_nats):
     """Create a test client with mocked dependencies."""
     app.dependency_overrides[get_nats] = lambda: mock_nats
     return TestClient(app)
+
 
 # Basic CRUD Tests
 @pytest.mark.asyncio
@@ -53,6 +57,7 @@ async def test_list_devices_empty(client, db_session):
     data = response.json()
     assert len(data["items"]) == 0
     assert data["total"] == 0
+
 
 @pytest.mark.asyncio
 async def test_list_devices_with_filters(client, test_device, db_session):
@@ -86,6 +91,7 @@ async def test_list_devices_with_filters(client, test_device, db_session):
     assert data["skip"] == 0
     assert data["limit"] == 1
 
+
 @pytest.mark.asyncio
 async def test_create_device_validation(client, db_session):
     """Test device creation validation."""
@@ -93,17 +99,16 @@ async def test_create_device_validation(client, db_session):
     invalid_data = {
         "hostname": "invalid-device",
         "ip_address": "invalid-ip",
-        "device_type": "router"
+        "device_type": "router",
     }
     response = client.post("/api/v1/devices", json=invalid_data)
     assert response.status_code == 422
 
     # Test missing required fields
-    invalid_data = {
-        "hostname": "invalid-device"
-    }
+    invalid_data = {"hostname": "invalid-device"}
     response = client.post("/api/v1/devices", json=invalid_data)
     assert response.status_code == 422
+
 
 @pytest.mark.asyncio
 async def test_create_device_duplicate(client, test_device, db_session):
@@ -114,10 +119,11 @@ async def test_create_device_duplicate(client, test_device, db_session):
     duplicate_data = {
         "hostname": "duplicate-device",
         "ip_address": test_device.ip_address,
-        "device_type": "router"
+        "device_type": "router",
     }
     response = client.post("/api/v1/devices", json=duplicate_data)
     assert response.status_code == 400
+
 
 @pytest.mark.asyncio
 async def test_update_device_partial(client, test_device, db_session):
@@ -125,23 +131,21 @@ async def test_update_device_partial(client, test_device, db_session):
     db_session.add(test_device)
     await db_session.commit()
 
-    update_data = {
-        "hostname": "updated-hostname"
-    }
+    update_data = {"hostname": "updated-hostname"}
     response = client.put(f"/api/v1/devices/{test_device.id}", json=update_data)
     assert response.status_code == 200
     data = response.json()
     assert data["hostname"] == update_data["hostname"]
     assert data["ip_address"] == test_device.ip_address  # Unchanged
 
+
 @pytest.mark.asyncio
 async def test_update_device_not_found(client):
     """Test updating non-existent device."""
-    update_data = {
-        "hostname": "updated-hostname"
-    }
+    update_data = {"hostname": "updated-hostname"}
     response = client.put(f"/api/v1/devices/{uuid4()}", json=update_data)
     assert response.status_code == 404
+
 
 # Device Status Tests
 @pytest.mark.asyncio
@@ -151,10 +155,7 @@ async def test_device_status_transitions(client, test_device, db_session):
     await db_session.commit()
 
     # Test status update
-    status_data = {
-        "status": "maintenance",
-        "details": {"reason": "scheduled maintenance"}
-    }
+    status_data = {"status": "maintenance", "details": {"reason": "scheduled maintenance"}}
     response = client.put(f"/api/v1/devices/{test_device.id}/status", json=status_data)
     assert response.status_code == 200
     data = response.json()
@@ -166,12 +167,14 @@ async def test_device_status_transitions(client, test_device, db_session):
     data = response.json()
     assert data["status"] == status_data["status"]
 
+
 # Device Discovery Tests
 @pytest.mark.asyncio
 async def test_discover_devices_invalid_network(client):
     """Test device discovery with invalid network."""
     response = client.post("/api/v1/devices/discover?network=invalid-network")
     assert response.status_code == 400
+
 
 @pytest.mark.asyncio
 async def test_discover_devices_timeout(client, mock_nats):
@@ -180,6 +183,7 @@ async def test_discover_devices_timeout(client, mock_nats):
         mock_discover.side_effect = asyncio.TimeoutError()
         response = client.post("/api/v1/devices/discover?network=192.168.1.0/24")
         assert response.status_code == 503
+
 
 # Device Metrics Tests
 @pytest.mark.asyncio
@@ -193,6 +197,7 @@ async def test_get_device_metrics_unavailable(client, test_device, db_session):
         response = client.get(f"/api/v1/devices/{test_device.id}/metrics")
         assert response.status_code == 503
 
+
 # Device Configuration Tests
 @pytest.mark.asyncio
 async def test_update_device_configuration_validation(client, test_device, db_session):
@@ -202,11 +207,9 @@ async def test_update_device_configuration_validation(client, test_device, db_se
 
     # Test invalid configuration format
     invalid_config = "invalid-config"
-    response = client.put(
-        f"/api/v1/devices/{test_device.id}/configuration",
-        json=invalid_config
-    )
+    response = client.put(f"/api/v1/devices/{test_device.id}/configuration", json=invalid_config)
     assert response.status_code == 422
+
 
 @pytest.mark.asyncio
 async def test_update_device_configuration_rejected(client, test_device, db_session):
@@ -214,16 +217,17 @@ async def test_update_device_configuration_rejected(client, test_device, db_sess
     db_session.add(test_device)
     await db_session.commit()
 
-    with patch("opmas_mgmt_api.services.devices.DeviceService.update_device_configuration") as mock_update:
+    with patch(
+        "opmas_mgmt_api.services.devices.DeviceService.update_device_configuration"
+    ) as mock_update:
         mock_update.side_effect = OPMASException(
-            status_code=400,
-            detail="Configuration rejected by device"
+            status_code=400, detail="Configuration rejected by device"
         )
         response = client.put(
-            f"/api/v1/devices/{test_device.id}/configuration",
-            json={"setting": "value"}
+            f"/api/v1/devices/{test_device.id}/configuration", json={"setting": "value"}
         )
         assert response.status_code == 400
+
 
 # Error Handling Tests
 @pytest.mark.asyncio
@@ -234,6 +238,7 @@ async def test_database_error_handling(client, test_device, db_session):
         response = client.get("/api/v1/devices")
         assert response.status_code == 500
 
+
 @pytest.mark.asyncio
 async def test_nats_error_handling(client, test_device, db_session):
     """Test NATS error handling."""
@@ -242,11 +247,9 @@ async def test_nats_error_handling(client, test_device, db_session):
 
     with patch("opmas_mgmt_api.core.nats.NATSManager.publish") as mock_publish:
         mock_publish.side_effect = Exception("NATS error")
-        response = client.put(
-            f"/api/v1/devices/{test_device.id}/status",
-            json={"status": "active"}
-        )
+        response = client.put(f"/api/v1/devices/{test_device.id}/status", json={"status": "active"})
         assert response.status_code == 200  # Should still succeed, just log the error
+
 
 # Integration Tests
 @pytest.mark.asyncio
@@ -258,17 +261,14 @@ async def test_device_lifecycle(client, db_session):
         "ip_address": "192.168.1.100",
         "device_type": "router",
         "model": "Test Model",
-        "firmware_version": "1.0.0"
+        "firmware_version": "1.0.0",
     }
     response = client.post("/api/v1/devices", json=device_data)
     assert response.status_code == 201
     device_id = response.json()["id"]
 
     # Update device
-    update_data = {
-        "hostname": "updated-lifecycle-device",
-        "status": "maintenance"
-    }
+    update_data = {"hostname": "updated-lifecycle-device", "status": "maintenance"}
     response = client.put(f"/api/v1/devices/{device_id}", json=update_data)
     assert response.status_code == 200
 
@@ -277,11 +277,7 @@ async def test_device_lifecycle(client, db_session):
     assert response.status_code == 200
 
     # Update configuration
-    config_data = {
-        "interfaces": {
-            "eth0": {"enabled": True, "ip": "192.168.1.100/24"}
-        }
-    }
+    config_data = {"interfaces": {"eth0": {"enabled": True, "ip": "192.168.1.100/24"}}}
     response = client.put(f"/api/v1/devices/{device_id}/configuration", json=config_data)
     assert response.status_code == 200
 
@@ -291,4 +287,4 @@ async def test_device_lifecycle(client, db_session):
 
     # Verify device is deleted
     response = client.get(f"/api/v1/devices/{device_id}")
-    assert response.status_code == 404 
+    assert response.status_code == 404

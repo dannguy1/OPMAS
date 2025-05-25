@@ -1,18 +1,20 @@
 # src/opmas/db_utils.py
 
 import logging
-from contextlib import contextmanager
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, scoped_session, Session
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.pool import QueuePool
-from typing import Generator, Optional
 import os
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Generator, Optional
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.pool import QueuePool
+
+from opmas.config import get_config
 
 # Import Base from db_models for table creation
 from .models import Base
-from opmas.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -21,21 +23,22 @@ _engine = None
 _session_factory = None
 _scoped_session_factory = None
 
+
 def get_db_url_from_config() -> str:
     """Constructs the database connection URL from the loaded config."""
     config = get_config()
-    db_config = config.get('database')
+    db_config = config.get("database")
 
     if not db_config:
         logger.error("Database configuration missing in opmas_config.yaml")
         raise ValueError("Database configuration is missing.")
 
-    db_type = db_config.get('db_type')
-    user = db_config.get('username')
-    password = db_config.get('password')
-    host = db_config.get('host')
-    port = db_config.get('port')
-    dbname = db_config.get('database')
+    db_type = db_config.get("db_type")
+    user = db_config.get("username")
+    password = db_config.get("password")
+    host = db_config.get("host")
+    port = db_config.get("port")
+    dbname = db_config.get("database")
 
     if not all([db_type, user, password, host, port, dbname]):
         logger.error("Incomplete database configuration details.")
@@ -50,6 +53,7 @@ def get_db_url_from_config() -> str:
     logger.debug(f"Constructed DB URL: postgresql://{user}:***@{host}:{port}/{dbname}")
     return db_url
 
+
 def get_engine():
     """Returns the SQLAlchemy engine, creating it if it doesn't exist."""
     global _engine
@@ -57,7 +61,7 @@ def get_engine():
         try:
             db_url = get_db_url_from_config()
             # TODO: Consider adding connection pool options (pool_size, max_overflow)
-            _engine = create_engine(db_url, echo=False) # Set echo=True for SQL logging
+            _engine = create_engine(db_url, echo=False)  # Set echo=True for SQL logging
             logger.info(f"SQLAlchemy engine created for {db_url.split('@')[-1]}")
         except ValueError as e:
             logger.critical(f"Failed to get DB configuration for engine: {e}")
@@ -66,6 +70,7 @@ def get_engine():
             logger.critical(f"Failed to create SQLAlchemy engine: {e}", exc_info=True)
             raise
     return _engine
+
 
 def get_session_factory():
     """Returns the SQLAlchemy session factory."""
@@ -76,6 +81,7 @@ def get_session_factory():
         logger.debug("SQLAlchemy session factory created.")
     return _session_factory
 
+
 def get_scoped_session_factory():
     """Returns the SQLAlchemy scoped session factory for thread safety."""
     global _scoped_session_factory
@@ -84,6 +90,7 @@ def get_scoped_session_factory():
         _scoped_session_factory = scoped_session(sessionmaker(bind=engine))
         logger.debug("SQLAlchemy scoped session factory created.")
     return _scoped_session_factory
+
 
 @contextmanager
 def get_db_session():
@@ -104,10 +111,11 @@ def get_db_session():
     except SQLAlchemyError as e:
         logger.error(f"DB session {id(session)} error: {e}. Rolling back.", exc_info=True)
         session.rollback()
-        raise # Re-raise the exception after rollback
+        raise  # Re-raise the exception after rollback
     finally:
         session.close()
         logger.debug(f"DB session {id(session)} closed.")
+
 
 def get_db():
     """FastAPI dependency to get a DB session."""
@@ -116,8 +124,9 @@ def get_db():
     try:
         yield session
     finally:
-        session.close() # Ensure session is closed
+        session.close()  # Ensure session is closed
         logger.debug(f"DB session {id(session)} closed (from get_db dependency).")
+
 
 def init_db():
     """Initializes the database by creating all tables defined in db_models.
@@ -131,10 +140,11 @@ def init_db():
         logger.info("Creating tables based on metadata...")
         # Base.metadata contains all tables derived from Base
         Base.metadata.create_all(engine)
-        logger.info("Database tables created successfully (if they didn't exist)." )
+        logger.info("Database tables created successfully (if they didn't exist).")
     except Exception as e:
         logger.critical(f"Failed to initialize database: {e}", exc_info=True)
         raise
+
 
 # Optional: Function to close the engine (useful for testing or explicit shutdown)
 def close_engine():
@@ -142,4 +152,4 @@ def close_engine():
     if _engine:
         logger.info("Disposing SQLAlchemy engine.")
         _engine.dispose()
-        _engine = None 
+        _engine = None

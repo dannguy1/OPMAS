@@ -1,8 +1,11 @@
-from pydantic import BaseModel, validator
-from typing import Optional, Dict, Any, List
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, validator
+
 from ..models.playbook_execution import ExecutionStatus
+
 
 class PlaybookBase(BaseModel):
     name: str
@@ -10,33 +13,35 @@ class PlaybookBase(BaseModel):
     steps: List[Dict[str, Any]]
     version: str
 
-    @validator('name')
+    @validator("name")
     def validate_name(cls, v):
-        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid playbook name format')
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid playbook name format")
         return v
 
-    @validator('version')
+    @validator("version")
     def validate_version(cls, v):
-        if not re.match(r'^\d+\.\d+\.\d+$', v):
-            raise ValueError('Version must be in format x.y.z')
+        if not re.match(r"^\d+\.\d+\.\d+$", v):
+            raise ValueError("Version must be in format x.y.z")
         return v
 
-    @validator('steps')
+    @validator("steps")
     def validate_steps(cls, v):
         if not v:
-            raise ValueError('Playbook must have at least one step')
+            raise ValueError("Playbook must have at least one step")
         for step in v:
             if not isinstance(step, dict):
-                raise ValueError('Each step must be a dictionary')
-            if 'type' not in step:
-                raise ValueError('Each step must have a type field')
-            if 'action' not in step:
-                raise ValueError('Each step must have an action field')
+                raise ValueError("Each step must be a dictionary")
+            if "type" not in step:
+                raise ValueError("Each step must have a type field")
+            if "action" not in step:
+                raise ValueError("Each step must have an action field")
         return v
+
 
 class PlaybookCreate(PlaybookBase):
     pass
+
 
 class PlaybookUpdate(BaseModel):
     name: Optional[str] = None
@@ -45,31 +50,32 @@ class PlaybookUpdate(BaseModel):
     version: Optional[str] = None
     is_active: Optional[bool] = None
 
-    @validator('name')
+    @validator("name")
     def validate_name(cls, v):
-        if v is not None and not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$', v):
-            raise ValueError('Invalid playbook name format')
+        if v is not None and not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$", v):
+            raise ValueError("Invalid playbook name format")
         return v
 
-    @validator('version')
+    @validator("version")
     def validate_version(cls, v):
-        if v is not None and not re.match(r'^\d+\.\d+\.\d+$', v):
-            raise ValueError('Version must be in format x.y.z')
+        if v is not None and not re.match(r"^\d+\.\d+\.\d+$", v):
+            raise ValueError("Version must be in format x.y.z")
         return v
 
-    @validator('steps')
+    @validator("steps")
     def validate_steps(cls, v):
         if v is not None:
             if not v:
-                raise ValueError('Playbook must have at least one step')
+                raise ValueError("Playbook must have at least one step")
             for step in v:
                 if not isinstance(step, dict):
-                    raise ValueError('Each step must be a dictionary')
-                if 'type' not in step:
-                    raise ValueError('Each step must have a type field')
-                if 'action' not in step:
-                    raise ValueError('Each step must have an action field')
+                    raise ValueError("Each step must be a dictionary")
+                if "type" not in step:
+                    raise ValueError("Each step must have a type field")
+                if "action" not in step:
+                    raise ValueError("Each step must have an action field")
         return v
+
 
 class PlaybookInDB(PlaybookBase):
     id: int
@@ -80,9 +86,11 @@ class PlaybookInDB(PlaybookBase):
     class Config:
         from_attributes = True
 
+
 class PlaybookStatus(BaseModel):
     is_active: bool
     updated_at: datetime
+
 
 class PlaybookExecutionBase(BaseModel):
     playbook_id: int
@@ -92,8 +100,10 @@ class PlaybookExecutionBase(BaseModel):
     results: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
 
+
 class PlaybookExecutionCreate(PlaybookExecutionBase):
     pass
+
 
 class PlaybookExecutionUpdate(BaseModel):
     status: Optional[ExecutionStatus] = None
@@ -102,10 +112,11 @@ class PlaybookExecutionUpdate(BaseModel):
     results: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
 
+
 class PlaybookExecutionInDB(PlaybookExecutionBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime]
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

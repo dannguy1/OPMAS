@@ -1,9 +1,13 @@
-from sqlalchemy import Column, String, JSON, DateTime, Boolean
 from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, String
+
 from .base import Base
+
 
 class Rule(Base):
     """Rule model for storing analysis rules."""
+
     __tablename__ = "rules"
 
     id = Column(String, primary_key=True)
@@ -17,4 +21,4 @@ class Rule(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
-        return f"<Rule(name='{self.name}', severity='{self.severity}')>" 
+        return f"<Rule(name='{self.name}', severity='{self.severity}')>"

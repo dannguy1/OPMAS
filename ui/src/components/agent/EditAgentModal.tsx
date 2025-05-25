@@ -57,7 +57,7 @@ const EditAgentModal: React.FC<EditAgentModalProps> = ({ isOpen, onClose, onAgen
         description: description || null,
         is_enabled: agent.is_enabled
       };
-      
+
       const response = await apiClient.put<Agent>(`/agents/${agent.agent_id}`, updatedData);
       onAgentUpdated(response.data);
       resetFormAndClose();
@@ -77,18 +77,18 @@ const EditAgentModal: React.FC<EditAgentModalProps> = ({ isOpen, onClose, onAgen
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="relative bg-white rounded-lg shadow-xl w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200 rounded-t-lg">
           <h2 className="text-xl font-semibold text-gray-800">Edit Agent: {agent.name} (ID: {agent.agent_id})</h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
             aria-label="Close modal"
           >
@@ -163,4 +163,4 @@ const EditAgentModal: React.FC<EditAgentModalProps> = ({ isOpen, onClose, onAgen
   );
 };
 
-export default EditAgentModal; 
+export default EditAgentModal;

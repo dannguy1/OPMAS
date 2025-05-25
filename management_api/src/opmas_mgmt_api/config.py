@@ -1,13 +1,16 @@
 import os
 from typing import List
+
 from pydantic import AnyHttpUrl, validator
 from pydantic_settings import BaseSettings
+
 
 class AuthSettings(BaseSettings):
     jwt_secret: str = "supersecret"  # Replace with a secure value for production
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+
 
 class Settings(BaseSettings):
     # API Settings
@@ -73,7 +76,10 @@ class Settings(BaseSettings):
         case_sensitive = True
         env_file = ".env"
 
+
 # Dependency
 settings = Settings()
+
+
 def get_settings():
-    return settings 
+    return settings

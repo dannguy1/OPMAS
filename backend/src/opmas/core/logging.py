@@ -10,9 +10,10 @@ from typing import Any, Dict, Optional
 
 from .config import ConfigManager, LoggingConfig
 
+
 class JSONFormatter(logging.Formatter):
     """JSON formatter for structured logging."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data: Dict[str, Any] = {
@@ -31,7 +32,7 @@ class JSONFormatter(logging.Formatter):
             log_data["exception"] = {
                 "type": record.exc_info[0].__name__,
                 "message": str(record.exc_info[1]),
-                "traceback": self.formatException(record.exc_info)
+                "traceback": self.formatException(record.exc_info),
             }
 
         # Add extra fields if present
@@ -40,18 +41,20 @@ class JSONFormatter(logging.Formatter):
 
         return json.dumps(log_data)
 
+
 class CorrelationFilter(logging.Filter):
     """Add correlation ID to log records."""
-    
+
     def filter(self, record: logging.LogRecord) -> bool:
         """Add correlation ID if not present."""
         if not hasattr(record, "correlation_id"):
             record.correlation_id = str(uuid.uuid4())
         return True
 
+
 class LogManager:
     """Manage logging configuration and setup."""
-    
+
     def __init__(self, config: Optional[LoggingConfig] = None):
         self.config = config or ConfigManager().get_config().logging
         self._setup_logging()
@@ -82,7 +85,7 @@ class LogManager:
             filename=str(log_file),
             when=self.config.rotation.split()[1],
             interval=int(self.config.rotation.split()[0]),
-            backupCount=int(self.config.retention.split()[0])
+            backupCount=int(self.config.retention.split()[0]),
         )
         file_handler.setFormatter(JSONFormatter())
         file_handler.addFilter(CorrelationFilter())
@@ -94,6 +97,7 @@ class LogManager:
         logger.propagate = True
         return logger
 
+
 def setup_logging(config: Optional[LoggingConfig] = None) -> None:
     """Set up logging configuration."""
-    LogManager(config).get_logger(__name__) 
+    LogManager(config).get_logger(__name__)

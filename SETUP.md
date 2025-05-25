@@ -1,7 +1,7 @@
 # OPMAS Monorepo Setup Guide
 
 ## Overview
-This guide outlines the steps to set up the OPMAS monorepo structure, which will contain all components (Management API, Backend Services, Frontend, Agents) in a single repository. This approach allows for:
+This guide outlines the steps to set up the OPMAS monorepo structure, which will contain all components (Management API, Core Services, UI, Agents) in a single repository. This approach allows for:
 - Coordinated development across components
 - Shared configuration and documentation
 - Simplified dependency management
@@ -11,6 +11,13 @@ This guide outlines the steps to set up the OPMAS monorepo structure, which will
 - Git installed
 - GitHub account/organization
 - Access to the OPMAS project directory
+- Docker Engine (version 20.10.0 or later)
+- Docker Compose (version 2.0.0 or later)
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL 14+
+- Redis
+- NATS Server
 
 ## Clean Start
 ```bash
@@ -28,8 +35,8 @@ git init
 ```
 opmas/
 ├── management_api/     # Management API service
-├── backend/           # Core backend services
-├── frontend/          # Web interface
+├── core/              # Core backend services
+├── ui/                # Web interface
 ├── agents/            # Security and monitoring agents
 ├── docs/             # Documentation
 └── k8s/              # Kubernetes manifests
@@ -169,8 +176,8 @@ OPMAS is a comprehensive platform for managing and securing network infrastructu
 ## Components
 
 - **Management API** (`/management_api`): RESTful API for system management
-- **Backend Services** (`/backend`): Core services for device management and security
-- **Frontend** (`/frontend`): Web interface for system administration
+- **Core Services** (`/core`): Core services for device management and security
+- **UI** (`/ui`): Web interface for system administration
 - **Agents** (`/agents`): Security and monitoring agents for network devices
 - **Documentation** (`/docs`): System documentation and guides
 
@@ -180,7 +187,7 @@ OPMAS is a comprehensive platform for managing and securing network infrastructu
 
 - Python 3.10+
 - Node.js 18+
-- PostgreSQL 13+
+- PostgreSQL 14+
 - Redis
 - NATS Server
 - Docker & Docker Compose
@@ -196,16 +203,12 @@ cd opmas
 2. Set up the Management API:
 ```bash
 cd management_api
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp example.env .env
-./setup.sh
+docker-compose up -d
 ```
 
-3. Set up the Frontend:
+3. Set up the UI:
 ```bash
-cd frontend
+cd ui
 npm install
 cp .env.example .env
 ```
@@ -240,8 +243,8 @@ git push origin feature/your-feature-name
 ```
 opmas/
 ├── management_api/     # Management API service
-├── backend/           # Core backend services
-├── frontend/          # Web interface
+├── core/              # Core backend services
+├── ui/                # Web interface
 ├── agents/            # Security and monitoring agents
 ├── docs/             # Documentation
 └── k8s/              # Kubernetes manifests
@@ -278,11 +281,11 @@ git commit -m "Initial commit: OPMAS monorepo setup"
 
 ### 3. Create Development Branches
 ```bash
-# Create and switch to backend branch
-git checkout -b feature/backend
+# Create and switch to core branch
+git checkout -b feature/core
 
-# Create and switch to frontend branch
-git checkout -b feature/frontend
+# Create and switch to ui branch
+git checkout -b feature/ui
 
 # Create and switch to api branch
 git checkout -b feature/api
@@ -300,8 +303,8 @@ git remote add origin https://github.com/your-org/opmas.git
 git push -u origin main
 
 # Push development branches
-git push -u origin feature/backend
-git push -u origin feature/frontend
+git push -u origin feature/core
+git push -u origin feature/ui
 git push -u origin feature/api
 ```
 
@@ -316,7 +319,7 @@ git push -u origin feature/api
 ## Notes
 1. Replace `your-org` in the repository URLs with your actual GitHub organization/username
 2. Update the contact information in the README.md
-3. Each component (backend, frontend, api) will be developed in its respective feature branch
+3. Each component (core, ui, api) will be developed in its respective feature branch
 4. The main branch will contain the stable, integrated version of all components
 5. Consider using Git LFS for large files if needed
 
@@ -324,4 +327,4 @@ git push -u origin feature/api
 1. Set up GitHub repository
 2. Configure branch protection rules
 3. Set up CI/CD pipeline
-4. Begin component development in respective feature branches 
+4. Begin component development in respective feature branches

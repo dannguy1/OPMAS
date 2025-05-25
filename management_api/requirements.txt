@@ -39,4 +39,4 @@ mypy>=1.5.1
 pre-commit>=3.4.0
 
 # Added from the code block
-aiohttp==3.9.1 
+aiohttp==3.9.1

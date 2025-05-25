@@ -79,7 +79,7 @@ database:
   password: "opmas_password" # <<< REPLACE WITH STRONG PASSWORD >>>
   database: "opmas_db"      # Replace with your DB name
   # Optional: Add connection arguments if needed, e.g., SSL settings
-  # connect_args: 
+  # connect_args:
   #   sslmode: "require"
 
 # action_executor:

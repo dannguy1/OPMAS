@@ -1,7 +1,7 @@
 # src/opmas/parsing_utils.py
 
-import re
 import logging
+import re
 from datetime import datetime
 from typing import Dict, Optional, Union
 
@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 # <PRI>Timestamp Hostname Program[PID]: Message
 # Example: <29>Nov 22 00:58:16 OpenWrt wpa_supplicant[1431]: wl1-sta0: RSN: Group rekeying completed...
 LOG_LINE_REGEX = re.compile(
-    r"<(\d+)>"                          # 1: Priority
-    r"(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})" # 2: Timestamp (e.g., Nov 22 00:58:16)
-    r"\s+(\S+)"                         # 3: Hostname
+    r"<(\d+)>"  # 1: Priority
+    r"(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})"  # 2: Timestamp (e.g., Nov 22 00:58:16)
+    r"\s+(\S+)"  # 3: Hostname
     # 4: Program name (allow almost anything except '[', ':', needs careful testing)
     # Corrected regex: Use raw string (r"") and avoid unnecessary escapes
     r"\s+([^\[:]+)"
-    r"(?:\[(\d+)\])?"                   # 5: PID (optional)
-    r":\s+(.*)"                         # 6: Message
+    r"(?:\[(\d+)\])?"  # 5: PID (optional)
+    r":\s+(.*)"  # 6: Message
 )
 
 # Simple classification rules based on program name
@@ -32,6 +32,7 @@ SUBJECT_CLASSIFICATION = {
 }
 DEFAULT_SUBJECT = "logs.generic"
 
+
 def parse_syslog_line(line: str, year: int) -> Optional[Dict[str, Union[str, int, None]]]:
     """Parses a syslog-formatted log line, returning key components."""
     match = LOG_LINE_REGEX.match(line)
@@ -43,7 +44,7 @@ def parse_syslog_line(line: str, year: int) -> Optional[Dict[str, Union[str, int
         timestamp_str = match.group(2)
         hostname = match.group(3)
         program = match.group(4).strip()
-        pid_str = match.group(5) # Optional
+        pid_str = match.group(5)  # Optional
         pid = int(pid_str) if pid_str else None
         message = match.group(6)
 
@@ -58,25 +59,28 @@ def parse_syslog_line(line: str, year: int) -> Optional[Dict[str, Union[str, int
             "process_name": program,
             "pid": pid,
             "message": message,
-            "raw": line.strip(), # Include raw line for reference if needed
-            "priority": priority # Include priority if needed later
+            "raw": line.strip(),  # Include raw line for reference if needed
+            "priority": priority,  # Include priority if needed later
         }
     except (ValueError, IndexError) as e:
         logger.warning(f"Failed to parse syslog line: '{line.strip()}'. Error: {e}")
         return None
-    except Exception as e: # Catch other potential errors during parsing
+    except Exception as e:  # Catch other potential errors during parsing
         logger.error(f"Unexpected error parsing syslog line '{line.strip()}': {e}", exc_info=True)
         return None
+
 
 def classify_nats_subject(process_name: Optional[str]) -> str:
     """Determines the NATS subject based on program/process name."""
     if process_name is None:
         return DEFAULT_SUBJECT
     # Normalize process name (e.g., remove potential trailing colons seen sometimes)
-    normalized_name = process_name.lower().strip(':')
+    normalized_name = process_name.lower().strip(":")
     return SUBJECT_CLASSIFICATION.get(normalized_name, DEFAULT_SUBJECT)
 
+
 # --- Helper functions from ingest script ---
+
 
 def infer_year_from_filename(filename: str) -> Optional[int]:
     """Attempts to infer the year from filename patterns like YYYYMMDD."""
@@ -89,5 +93,5 @@ def infer_year_from_filename(filename: str) -> Optional[int]:
             if 1970 < year < datetime.now().year + 5:
                 return year
         except ValueError:
-            pass # Ignore if conversion fails
+            pass  # Ignore if conversion fails
     return None

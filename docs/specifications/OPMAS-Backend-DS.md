@@ -254,4 +254,4 @@ This document outlines the design for the core backend components of the OpenWRT
 * Advanced correlation rules
 * Extended agent capabilities
 * Enhanced monitoring
-* Automated recovery actions 
+* Automated recovery actions

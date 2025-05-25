@@ -37,4 +37,4 @@ CREATE INDEX idx_devices_ip_address ON devices(ip_address);
 CREATE INDEX idx_logs_device_id ON logs(device_id);
 CREATE INDEX idx_logs_timestamp ON logs(timestamp);
 CREATE INDEX idx_logs_severity ON logs(severity);
-CREATE INDEX idx_rules_name ON rules(name); 
+CREATE INDEX idx_rules_name ON rules(name);

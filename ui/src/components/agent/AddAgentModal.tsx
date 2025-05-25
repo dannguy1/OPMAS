@@ -42,7 +42,7 @@ const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, onAgentA
         description: description || null,
         is_enabled: true
       });
-      
+
       onAgentAdded(response.data);
       resetForm();
       onClose();
@@ -62,18 +62,18 @@ const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, onAgentA
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="relative bg-white rounded-lg shadow-xl w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b border-gray-200 rounded-t-lg">
           <h2 className="text-xl font-semibold text-gray-800">Add New Agent</h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
             aria-label="Close modal"
           >
@@ -124,7 +124,7 @@ const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, onAgentA
           {error && (
             <p className="text-red-600 text-sm -mt-2 mb-2">{error}</p>
           )}
-          
+
           <div className="flex items-center justify-end pt-4 border-t border-gray-200 rounded-b space-x-3">
             <button
               type="button"
@@ -148,4 +148,4 @@ const AddAgentModal: React.FC<AddAgentModalProps> = ({ isOpen, onClose, onAgentA
   );
 };
 
-export default AddAgentModal; 
+export default AddAgentModal;

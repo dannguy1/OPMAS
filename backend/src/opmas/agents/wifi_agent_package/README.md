@@ -30,9 +30,9 @@ The agent can be run standalone for testing (requires NATS connection and databa
 ```bash
 # Ensure necessary dependencies and environment variables (like DB connection string, NATS URL) are set
 # Optional: Install python-dotenv if testing .env loading
-# pip install python-dotenv 
+# pip install python-dotenv
 
 # Make sure the relative imports in agent.py work from your execution context
 # You might need to adjust PYTHONPATH or run as a module
-python agent.py 
-``` 
+python agent.py
+```

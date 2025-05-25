@@ -34,8 +34,8 @@ const FindingsPage: React.FC = () => {
       try {
         // Add pagination params (example: first 50 findings)
         const response = await apiClient.get<{ findings: Finding[], total: number }>
-            ('/findings', { params: { limit: 50, offset: 0 } }); 
-        setFindings(response.data.findings || []); 
+            ('/findings', { params: { limit: 50, offset: 0 } });
+        setFindings(response.data.findings || []);
       } catch (err: any) {
         const errorMsg = err.response?.data?.detail || 'Failed to load findings. Is the Management API running?';
         console.error("Failed to fetch findings:", err);
@@ -58,13 +58,13 @@ const FindingsPage: React.FC = () => {
       <div className="border-b border-gray-200 pb-4 mb-4 flex justify-between items-center">
         <h1 className="text-xl font-semibold text-gray-800">Findings</h1>
         {/* Placeholder for potential header actions */}
-        <div></div> 
+        <div></div>
       </div>
 
       {/* Loading/Error Messages (inside card body) */}
       {loading && <p className="text-gray-600 py-4 text-center">Loading findings...</p>}
       {error && <p className="text-red-600 font-semibold py-4 text-center">Error: {error}</p>}
-      
+
       {/* Table Section (inside card body) */}
       {!loading && !error && (
         <div className="overflow-x-auto">
@@ -109,4 +109,4 @@ const FindingsPage: React.FC = () => {
   );
 };
 
-export default FindingsPage; 
+export default FindingsPage;

@@ -8,11 +8,11 @@ interface EditAgentRuleModalProps {
   ruleToEdit: AgentRule | null;
 }
 
-const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSubmit, 
-  ruleToEdit 
+const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  ruleToEdit
 }) => {
   const [ruleName, setRuleName] = useState('');
   const [ruleType, setRuleType] = useState('classification');
@@ -39,7 +39,7 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
   };
 
   const handlePatternChange = (index: number, value: string) => {
-    setClassificationPatterns(patterns => 
+    setClassificationPatterns(patterns =>
       patterns.map((pattern, i) => i === index ? value : pattern)
     );
   };
@@ -47,7 +47,7 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!ruleToEdit) return;
-    
+
     setError(null);
 
     if (!ruleName.trim()) {
@@ -169,4 +169,4 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
   );
 };
 
-export default EditAgentRuleModal; 
+export default EditAgentRuleModal;

@@ -241,4 +241,4 @@ This document outlines the design for the Management API component of OPMAS. The
 * Advanced filtering
 * Bulk operations
 * API versioning strategy
-* Enhanced security features 
+* Enhanced security features

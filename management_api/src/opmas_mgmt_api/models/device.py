@@ -1,23 +1,28 @@
 """Device model for managing network devices."""
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, ForeignKey, Enum
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 import enum
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
 from ..database import Base
+
 
 class DeviceStatus(enum.Enum):
     """Device status enumeration."""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     MAINTENANCE = "maintenance"
     ERROR = "error"
 
+
 class Device(Base):
     """Device model for managing network devices."""
-    
+
     __tablename__ = "devices"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     hostname = Column(String, unique=True, index=True)
     ip_address = Column(String, index=True)
@@ -32,11 +37,11 @@ class Device(Base):
     model = Column(String)
     serial_number = Column(String)
     firmware_version = Column(String)
-    
+
     # Foreign keys
     owner_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    
+
     # Relationships
     agents = relationship("Agent", back_populates="device", cascade="all, delete-orphan")
     rules = relationship("Rule", back_populates="device", cascade="all, delete-orphan")
-    owner = relationship("User", back_populates="devices") 
+    owner = relationship("User", back_populates="devices")

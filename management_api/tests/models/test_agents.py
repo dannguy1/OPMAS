@@ -1,13 +1,14 @@
 """Test agent management models."""
 
-import pytest
 from datetime import datetime
 from uuid import UUID, uuid4
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from opmas_mgmt_api.models.agents import Agent, AgentStatusHistory, AgentConfigHistory
+import pytest
 from opmas_mgmt_api.core.exceptions import ValidationError
+from opmas_mgmt_api.models.agents import Agent, AgentConfigHistory, AgentStatusHistory
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 @pytest.fixture
 def test_agent():
@@ -25,8 +26,9 @@ def test_agent():
         config={"scan_interval": 300},
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
-        last_seen=datetime.utcnow()
+        last_seen=datetime.utcnow(),
     )
+
 
 @pytest.fixture
 def test_status_history(test_agent):
@@ -36,8 +38,9 @@ def test_status_history(test_agent):
         agent_id=test_agent.id,
         status="online",
         details={"reason": "startup"},
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
+
 
 @pytest.fixture
 def test_config_history(test_agent):
@@ -48,8 +51,9 @@ def test_config_history(test_agent):
         config={"scan_interval": 300},
         version="1.0.0",
         metadata={"updated_by": "system"},
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
+
 
 @pytest.mark.asyncio
 async def test_create_agent(db: AsyncSession, test_agent: Agent):
@@ -72,6 +76,7 @@ async def test_create_agent(db: AsyncSession, test_agent: Agent):
     assert agent.metadata == test_agent.metadata
     assert agent.config == test_agent.config
 
+
 @pytest.mark.asyncio
 async def test_create_agent_validation():
     """Test agent creation validation."""
@@ -82,11 +87,14 @@ async def test_create_agent_validation():
             agent_type="invalid",  # Invalid agent type
             hostname="test-agent.local",
             ip_address="invalid-ip",  # Invalid IP address
-            port=70000  # Invalid port
+            port=70000,  # Invalid port
         )
 
+
 @pytest.mark.asyncio
-async def test_create_status_history(db: AsyncSession, test_agent: Agent, test_status_history: AgentStatusHistory):
+async def test_create_status_history(
+    db: AsyncSession, test_agent: Agent, test_status_history: AgentStatusHistory
+):
     """Test creating a status history entry in the database."""
     db.add(test_status_history)
     await db.commit()
@@ -102,8 +110,11 @@ async def test_create_status_history(db: AsyncSession, test_agent: Agent, test_s
     assert history.status == test_status_history.status
     assert history.details == test_status_history.details
 
+
 @pytest.mark.asyncio
-async def test_create_config_history(db: AsyncSession, test_agent: Agent, test_config_history: AgentConfigHistory):
+async def test_create_config_history(
+    db: AsyncSession, test_agent: Agent, test_config_history: AgentConfigHistory
+):
     """Test creating a config history entry in the database."""
     db.add(test_config_history)
     await db.commit()
@@ -120,8 +131,14 @@ async def test_create_config_history(db: AsyncSession, test_agent: Agent, test_c
     assert history.version == test_config_history.version
     assert history.metadata == test_config_history.metadata
 
+
 @pytest.mark.asyncio
-async def test_agent_relationships(db: AsyncSession, test_agent: Agent, test_status_history: AgentStatusHistory, test_config_history: AgentConfigHistory):
+async def test_agent_relationships(
+    db: AsyncSession,
+    test_agent: Agent,
+    test_status_history: AgentStatusHistory,
+    test_config_history: AgentConfigHistory,
+):
     """Test agent relationships."""
     db.add(test_agent)
     db.add(test_status_history)
@@ -134,8 +151,14 @@ async def test_agent_relationships(db: AsyncSession, test_agent: Agent, test_sta
     assert len(test_agent.config_history) == 1
     assert test_agent.config_history[0].id == test_config_history.id
 
+
 @pytest.mark.asyncio
-async def test_agent_cascade_delete(db: AsyncSession, test_agent: Agent, test_status_history: AgentStatusHistory, test_config_history: AgentConfigHistory):
+async def test_agent_cascade_delete(
+    db: AsyncSession,
+    test_agent: Agent,
+    test_status_history: AgentStatusHistory,
+    test_config_history: AgentConfigHistory,
+):
     """Test agent cascade delete."""
     db.add(test_agent)
     db.add(test_status_history)
@@ -155,6 +178,7 @@ async def test_agent_cascade_delete(db: AsyncSession, test_agent: Agent, test_st
     )
     assert result.scalar_one_or_none() is None
 
+
 @pytest.mark.asyncio
 async def test_agent_status_validation():
     """Test agent status validation."""
@@ -167,8 +191,9 @@ async def test_agent_status_validation():
             ip_address="192.168.1.100",
             port=8080,
             status="invalid_status",  # Invalid status
-            enabled=True
+            enabled=True,
         )
+
 
 @pytest.mark.asyncio
 async def test_agent_type_validation():
@@ -182,8 +207,9 @@ async def test_agent_type_validation():
             ip_address="192.168.1.100",
             port=8080,
             status="online",
-            enabled=True
+            enabled=True,
         )
+
 
 @pytest.mark.asyncio
 async def test_agent_port_validation():
@@ -197,8 +223,9 @@ async def test_agent_port_validation():
             ip_address="192.168.1.100",
             port=70000,  # Invalid port
             status="online",
-            enabled=True
+            enabled=True,
         )
+
 
 @pytest.mark.asyncio
 async def test_agent_ip_validation():
@@ -212,5 +239,5 @@ async def test_agent_ip_validation():
             ip_address="invalid-ip",  # Invalid IP address
             port=8080,
             status="online",
-            enabled=True
-        ) 
+            enabled=True,
+        )

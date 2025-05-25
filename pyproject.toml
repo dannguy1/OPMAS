@@ -22,4 +22,4 @@ disallow_incomplete_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=opmas --cov-report=term-missing" 
+addopts = "-v --cov=opmas --cov-report=term-missing"

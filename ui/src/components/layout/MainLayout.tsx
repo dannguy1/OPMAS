@@ -6,9 +6,9 @@ const MainLayout: React.FC = () => {
     { isActive }: { isActive: boolean }
   ) =>
     // Adjusted styles based on Bootstrap source
-    `block p-3 rounded transition-colors duration-150 
-     ${isActive 
-        ? 'bg-gray-700 text-white font-semibold' 
+    `block p-3 rounded transition-colors duration-150
+     ${isActive
+        ? 'bg-gray-700 text-white font-semibold'
         : 'text-gray-400 hover:bg-gray-700 hover:text-white'
      }`;
      // Removed focus ring for now, can be added back if needed
@@ -66,4 +66,4 @@ const MainLayout: React.FC = () => {
   );
 };
 
-export default MainLayout; 
+export default MainLayout;

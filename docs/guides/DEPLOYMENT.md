@@ -49,7 +49,7 @@ services:
     image: nats:latest
     ports:
       - "4222:4222"
-  
+
   postgres:
     image: postgres:14
     environment:
@@ -57,7 +57,7 @@ services:
       POSTGRES_USER: opmas
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+
   core:
     build: ./core
     depends_on:
@@ -66,14 +66,14 @@ services:
     environment:
       - NATS_URL=nats://nats:4222
       - DB_URL=postgresql://opmas:opmas@postgres:5432/opmas
-  
+
   management_api:
     build: ./management_api
     depends_on:
       - postgres
     environment:
       - DB_URL=postgresql://opmas:opmas@postgres:5432/opmas
-  
+
   ui:
     build: ./ui
     ports:
@@ -294,4 +294,7 @@ volumes:
 - **Rollback:**
   - Version rollback
   - Configuration restore
-  - State recovery 
+  - State recovery
+
+- **UI:**
+  - UI

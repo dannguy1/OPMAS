@@ -1,76 +1,119 @@
-"""NATS message bus integration."""
+"""NATS service for message handling."""
 
-import json
 import logging
-import asyncio
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Dict, Optional, cast
+
 import nats
-from nats.aio.client import Client as NATS
-from opmas_mgmt_api.core.config import settings
+from nats.aio.client import Client as NATSClient
 
 logger = logging.getLogger(__name__)
 
-class NATSManager:
-    """NATS message bus manager."""
-    
-    def __init__(self):
-        """Initialize NATS manager."""
-        self.settings = settings
-        self.nc: Optional[NATS] = None
-        self._subscribers: Dict[str, Callable] = {}
-        
-    async def connect(self):
-        """Connect to NATS server."""
-        if self.nc is None:
-            try:
-                self.nc = await nats.connect(self.settings.NATS_URL)
-                logger.info("Successfully connected to NATS server")
-            except Exception as e:
-                logger.error("Failed to connect to NATS server: %s", e)
-                raise
-                
-    async def close(self):
-        """Close NATS connection."""
-        if self.nc is not None:
-            await self.nc.close()
-            self.nc = None
-            
-    async def publish(self, subject: str, data: Dict[str, Any]):
-        """Publish message to NATS subject."""
-        if self.nc is None:
-            await self.connect()
-            
-        try:
-            message = json.dumps(data).encode()
-            await self.nc.publish(subject, message)
-            logger.debug("Published message to %s", subject)
-        except Exception as e:
-            logger.error("Failed to publish message to %s: %s", subject, e)
-            raise
-            
-    async def subscribe(self, subject: str, callback: Callable):
-        """Subscribe to NATS subject."""
-        if self.nc is None:
-            await self.connect()
-            
-        try:
-            await self.nc.subscribe(subject, cb=callback)
-            self._subscribers[subject] = callback
-            logger.debug("Subscribed to %s", subject)
-        except Exception as e:
-            logger.error("Failed to subscribe to %s: %s", subject, e)
-            raise
-            
-    async def unsubscribe(self, subject: str):
-        """Unsubscribe from NATS subject."""
-        if self.nc is not None and subject in self._subscribers:
-            try:
-                await self.nc.unsubscribe(subject)
-                del self._subscribers[subject]
-                logger.debug("Unsubscribed from %s", subject)
-            except Exception as e:
-                logger.error("Failed to unsubscribe from %s: %s", subject, e)
-                raise
 
-# Create global NATS manager instance
-nats_manager = NATSManager() 
+class NATSService:
+    """NATS service for message handling."""
+
+    def __init__(self) -> None:
+        """Initialize NATS service."""
+        self._client: Optional[NATSClient] = None
+        self._connected = False
+
+    async def connect(self) -> None:
+        """Connect to NATS server."""
+        try:
+            self._client = await nats.connect()
+            self._connected = True
+            logger.info("Connected to NATS server")
+        except Exception as e:
+            logger.error(
+                f"Failed to connect to NATS server: {e}"
+            )
+            raise
+
+    async def disconnect(self) -> None:
+        """Disconnect from NATS server."""
+        if self._client:
+            await self._client.close()
+            self._connected = False
+            logger.info("Disconnected from NATS server")
+
+    async def publish(
+        self,
+        subject: str,
+        payload: Dict[str, Any],
+    ) -> None:
+        """Publish message to NATS subject.
+
+        Args:
+            subject: NATS subject to publish to
+            payload: Message payload
+        """
+        if not self._client:
+            raise RuntimeError("NATS client not connected")
+        try:
+            await self._client.publish(subject, payload)
+            logger.debug(f"Published message to {subject}")
+        except Exception as e:
+            logger.error(
+                f"Failed to publish message: {e}"
+            )
+            raise
+
+    async def subscribe(
+        self,
+        subject: str,
+        callback: Any,
+    ) -> None:
+        """Subscribe to NATS subject.
+
+        Args:
+            subject: NATS subject to subscribe to
+            callback: Callback function to handle messages
+        """
+        if not self._client:
+            raise RuntimeError("NATS client not connected")
+        try:
+            await self._client.subscribe(subject, cb=callback)
+            logger.debug(f"Subscribed to {subject}")
+        except Exception as e:
+            logger.error(
+                f"Failed to subscribe: {e}"
+            )
+            raise
+
+    async def request(
+        self,
+        subject: str,
+        payload: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Send request to NATS subject and wait for response.
+
+        Args:
+            subject: NATS subject to send request to
+            payload: Request payload
+
+        Returns:
+            Response payload or None if no response
+        """
+        if not self._client:
+            raise RuntimeError("NATS client not connected")
+        try:
+            response = await self._client.request(subject, payload)
+            return cast(Dict[str, Any], response)
+        except Exception as e:
+            logger.error(
+                f"Failed to send request: {e}"
+            )
+            return None
+
+    @property
+    def is_connected(self) -> bool:
+        """Check if NATS client is connected.
+
+        Returns:
+            True if connected, False otherwise
+        """
+        return self._connected
+
+
+# Create singleton instance
+nats_manager = NATSService()

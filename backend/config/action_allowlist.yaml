@@ -51,4 +51,4 @@ allowed_commands:
 # The allowlist should ideally match the EXACT command after substitution,
 # or use a very strict regex pattern if templating is allowed.
 # For maximum security, avoid templating in the allowlist itself initially
-# and list every exact allowed command variation. 
+# and list every exact allowed command variation.

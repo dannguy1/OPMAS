@@ -173,4 +173,4 @@ pytest --cov=src/opmas
 5. Create pull request
 
 ## License
-[Your License] 
+[Your License]

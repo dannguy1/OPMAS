@@ -1,123 +1,108 @@
-"""Main FastAPI application."""
+"""Main application module."""
 
 import logging
+import time
+from typing import Any, Callable
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
+from opmas_mgmt_api.api.v1.api import api_router
+from opmas_mgmt_api.core.config import settings
+from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.services.websocket import WebSocketManager
+from opmas_mgmt_api.db.session import init_db
 
-from .api.v1 import router as api_v1_router
-from .auth.routers import router as auth_router
-from .config import get_settings
-from .monitoring import metrics_middleware, metrics_endpoint
-from .security import SecurityMiddleware, RateLimiter
-from .core.exceptions import OPMASException
-from .services.nats import nats_manager
-from .db.session import db_manager
-from .db.init_db import init_db
+logger = logging.getLogger(__name__)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("ManagementAPI")
-
-# Create FastAPI app
 app = FastAPI(
-    title="OPMAS Management API",
-    description="Management API for OpenWRT Proactive Monitoring Agentic System",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Add security middleware
-rate_limiter = RateLimiter(requests_per_minute=60)
-app.add_middleware(
-    SecurityMiddleware,
-    rate_limiter=rate_limiter,
-    allowed_hosts=["*"],  # Configure based on your environment
-    allowed_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowed_headers=["*"]
-)
-
-# Add CORS middleware with more permissive settings for docs
+# Set up CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Add metrics middleware
-app.middleware("http")(metrics_middleware)
 
-# Add metrics endpoint
-app.get("/metrics")(metrics_endpoint)
+@app.middleware("http")
+async def add_process_time_header(
+    request: Request,
+    call_next: Callable[[Request], Any],
+) -> Any:
+    """Add processing time to response headers.
 
-# Error handlers
-@app.exception_handler(OPMASException)
-async def opmas_exception_handler(request: Request, exc: OPMASException):
-    logger.error(f"OPMAS Exception: {exc.detail}", exc_info=True)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-        headers=exc.headers
-    )
+    Args:
+        request: Incoming request
+        call_next: Next middleware/handler
 
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    Returns:
+        Response with processing time header
+    """
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
 
-# Startup event
+
 @app.on_event("startup")
-async def startup_event():
-    logger.info("Management API starting up...")
+async def startup_event() -> None:
+    """Initialize services on startup."""
     try:
         # Initialize database
         await init_db()
-        logger.info("Database initialized successfully")
-        
-        # Connect to NATS
+        logger.info("Database initialized")
+
+        # Initialize NATS connection
+        nats_manager = NATSManager()
         await nats_manager.connect()
         logger.info("NATS connection established")
-        
+
+        # Initialize WebSocket manager
+        websocket_manager = WebSocketManager()
+        logger.info("WebSocket manager initialized")
+
     except Exception as e:
-        logger.critical(f"CRITICAL STARTUP ERROR: {e}", exc_info=True)
-        raise RuntimeError(f"Failed to initialize application: {e}")
+        logger.error(f"Error during startup: {e}")
+        raise
 
-# Shutdown event
+
 @app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Management API shutting down...")
-    await nats_manager.close()
-    logger.info("NATS connection closed")
+async def shutdown_event() -> None:
+    """Clean up resources on shutdown."""
+    try:
+        # Disconnect from NATS
+        nats_manager = NATSManager()
+        await nats_manager.disconnect()
+        logger.info("NATS connection closed")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
-# Include routers
-API_V1_PREFIX = "/api/v1"
-app.include_router(api_v1_router, prefix=API_V1_PREFIX)
-app.include_router(auth_router, prefix=API_V1_PREFIX)
 
-# Root endpoint
-@app.get("/", include_in_schema=False)
-async def root():
-    return {"message": "Welcome to the OPMAS Management API"}
-
-# Health check endpoint
 @app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "services": {
-            "database": "connected" if db_manager.engine is not None else "disconnected",
-            "nats": "connected" if nats_manager.nc is not None else "disconnected"
+async def health_check() -> JSONResponse:
+    """Check API health status.
+
+    Returns:
+        Health status response
+    """
+    nats_manager = NATSManager()
+    return JSONResponse(
+        {
+            "status": "healthy",
+            "version": "1.0.0",
+            "dependencies": {
+                "nats": nats_manager.is_connected,
+            },
         }
-    }
+    )
+
+
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_STR)

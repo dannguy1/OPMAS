@@ -7,7 +7,7 @@ create_db_user() {
     local dbname=$3
 
     echo "Creating user $username and database $dbname..."
-    
+
     # Create user
     psql -v ON_ERROR_STOP=1 <<-EOSQL
         DO
@@ -56,4 +56,4 @@ create_db_user "$DEV_USER" "$DEV_PASS" "$DEV_DB"
 create_db_user "$TEST_USER" "$TEST_PASS" "$TEST_DB"
 create_db_user "$PROD_USER" "$PROD_PASS" "$PROD_DB"
 
-echo "Database setup complete!" 
+echo "Database setup complete!"

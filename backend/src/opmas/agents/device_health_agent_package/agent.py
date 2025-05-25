@@ -9,16 +9,17 @@ from typing import Dict
 
 # OPMAS Imports
 from opmas.agents.base_agent import BaseAgent
-from opmas.data_models import ParsedLogEvent, AgentFinding
+from opmas.data_models import AgentFinding, ParsedLogEvent
 
 # Get logger specific to this agent module
-logger = logging.getLogger(__name__.split('.')[-1])
+logger = logging.getLogger(__name__.split(".")[-1])
+
 
 class DeviceHealthAgent(BaseAgent):
     """Agent specializing in Device Health related log analysis (memory, storage, etc.)."""
 
     AGENT_NAME = "DeviceHealthAgent"
-    SUBSCRIBED_TOPICS = ["logs.health"] # Subscribe to logs classified as health
+    SUBSCRIBED_TOPICS = ["logs.health"]  # Subscribe to logs classified as health
     FINDINGS_TOPIC = "findings.health"
 
     def __init__(self):
@@ -40,8 +41,8 @@ class DeviceHealthAgent(BaseAgent):
         self.compiled_patterns = {}
         # OOM rule might just use string checking, but compile if patterns are provided
         oom_rule = self.agent_rules.get("OOMKillerInvoked", {})
-        if isinstance(oom_rule, dict) and oom_rule.get('enabled', False):
-            patterns = oom_rule.get('oom_patterns', []) # Can be simple strings or regex
+        if isinstance(oom_rule, dict) and oom_rule.get("enabled", False):
+            patterns = oom_rule.get("oom_patterns", [])  # Can be simple strings or regex
             compiled = []
             is_regex = []
             for pattern_str in patterns:
@@ -50,11 +51,13 @@ class DeviceHealthAgent(BaseAgent):
                     compiled.append(re.compile(pattern_str))
                     is_regex.append(True)
                 except re.error:
-                    compiled.append(pattern_str) # Store as plain string
+                    compiled.append(pattern_str)  # Store as plain string
                     is_regex.append(False)
             if compiled:
-                 self.compiled_patterns["OOMKillerInvoked"] = list(zip(compiled, is_regex))
-                 self.logger.debug(f"Stored {len(compiled)} patterns/strings for rule 'OOMKillerInvoked'")
+                self.compiled_patterns["OOMKillerInvoked"] = list(zip(compiled, is_regex))
+                self.logger.debug(
+                    f"Stored {len(compiled)} patterns/strings for rule 'OOMKillerInvoked'"
+                )
 
         # Compile patterns for FilesystemErrors if rule exists
         # fs_rule = self.agent_rules.get("FilesystemErrors", {})
@@ -62,7 +65,9 @@ class DeviceHealthAgent(BaseAgent):
 
     async def process_log_event(self, event: ParsedLogEvent):
         """Process a health related log event based on defined rules."""
-        self.logger.debug(f"Processing event {event.event_id} from {event.hostname or event.source_ip}")
+        self.logger.debug(
+            f"Processing event {event.event_id} from {event.hostname or event.source_ip}"
+        )
 
         # --- Rule: OOM Killer Invoked ---
         await self._check_oom_killer(event)
@@ -79,7 +84,7 @@ class DeviceHealthAgent(BaseAgent):
         """Check if the log message indicates the OOM killer was invoked."""
         rule_name = "OOMKillerInvoked"
         rule_config = self.agent_rules.get(rule_name)
-        if not rule_config or not rule_config.get('enabled', False):
+        if not rule_config or not rule_config.get("enabled", False):
             return
 
         patterns_config = self.compiled_patterns.get(rule_name, [])
@@ -88,7 +93,7 @@ class DeviceHealthAgent(BaseAgent):
             return
 
         # Cooldown per device for OOM findings (don't want one per related log line)
-        finding_cooldown_seconds = rule_config.get('finding_cooldown_seconds', 3600) # E.g., 1 hour
+        finding_cooldown_seconds = rule_config.get("finding_cooldown_seconds", 3600)  # E.g., 1 hour
 
         message_lower = event.message.lower()
         oom_detected = False
@@ -96,56 +101,62 @@ class DeviceHealthAgent(BaseAgent):
 
         for pattern, is_regex in patterns_config:
             if is_regex:
-                if pattern.search(event.message): # Use original case for regex
+                if pattern.search(event.message):  # Use original case for regex
                     oom_detected = True
                     matched_pattern = pattern.pattern
                     break
             elif isinstance(pattern, str):
-                if pattern.lower() in message_lower: # Use lower case for string contains
+                if pattern.lower() in message_lower:  # Use lower case for string contains
                     oom_detected = True
                     matched_pattern = pattern
                     break
 
         if oom_detected:
-             device_key = event.hostname or event.source_ip # Use hostname if available, else IP
-             self.logger.warning(f"OOM Killer message detected on device {device_key}: '{event.message[:100]}...'")
-             current_time = time.time()
+            device_key = event.hostname or event.source_ip  # Use hostname if available, else IP
+            self.logger.warning(
+                f"OOM Killer message detected on device {device_key}: '{event.message[:100]}...'"
+            )
+            current_time = time.time()
 
-             # Check cooldown for this device
-             last_finding_time = self.recent_oom_findings.get(device_key, 0)
-             if current_time - last_finding_time > finding_cooldown_seconds:
-                 self.logger.info(f"Generating OOMKillerInvoked finding for device {device_key}")
+            # Check cooldown for this device
+            last_finding_time = self.recent_oom_findings.get(device_key, 0)
+            if current_time - last_finding_time > finding_cooldown_seconds:
+                self.logger.info(f"Generating OOMKillerInvoked finding for device {device_key}")
 
-                 # --- Generate Finding --- 
-                 finding = AgentFinding(
-                     device_hostname=event.hostname,
-                     device_ip=event.source_ip,
-                     severity="Critical", # OOM is generally critical
-                     finding_type=rule_name,
-                     description=f"Out Of Memory (OOM) killer invoked on device {device_key}.",
-                     details={
-                         "triggering_log_message": event.message,
-                         "matched_pattern": matched_pattern,
-                         "triggering_event_id": event.event_id,
-                         "process_name": event.process_name # Often kernel
-                     },
-                     evidence_event_ids=[event.event_id]
-                 )
-                 await self.publish_finding(finding)
+                # --- Generate Finding ---
+                finding = AgentFinding(
+                    device_hostname=event.hostname,
+                    device_ip=event.source_ip,
+                    severity="Critical",  # OOM is generally critical
+                    finding_type=rule_name,
+                    description=f"Out Of Memory (OOM) killer invoked on device {device_key}.",
+                    details={
+                        "triggering_log_message": event.message,
+                        "matched_pattern": matched_pattern,
+                        "triggering_event_id": event.event_id,
+                        "process_name": event.process_name,  # Often kernel
+                    },
+                    evidence_event_ids=[event.event_id],
+                )
+                await self.publish_finding(finding)
 
-                 # Update last finding time for cooldown
-                 self.recent_oom_findings[device_key] = current_time
-             else:
-                 self.logger.debug(f"OOM event for {device_key} occurred but within cooldown period.")
+                # Update last finding time for cooldown
+                self.recent_oom_findings[device_key] = current_time
+            else:
+                self.logger.debug(
+                    f"OOM event for {device_key} occurred but within cooldown period."
+                )
+
 
 # --- Main execution --- (for running the agent standalone)
 async def main():
     agent = DeviceHealthAgent()
     await agent.run()
 
+
 if __name__ == "__main__":
     print("Ensure NATS server is running and config files exist before starting agent.")
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("DeviceHealthAgent stopped by user.") 
+        logger.info("DeviceHealthAgent stopped by user.")

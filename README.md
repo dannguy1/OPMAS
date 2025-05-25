@@ -1,14 +1,26 @@
-# OPMAS (Open Platform Management and Security)
+# OPMAS (Open Platform for Multi-Agent Systems)
 
-OPMAS is a comprehensive platform for managing and securing network infrastructure, providing centralized control, monitoring, and automation capabilities.
+OPMAS is a distributed system for managing and orchestrating autonomous agents. It provides a robust platform for deploying, monitoring, and managing agent-based systems.
 
-## Components
+## Features
 
-- **Management API** (`/management_api`): RESTful API for system management
-- **Backend Services** (`/backend`): Core services for device management and security
-- **Frontend** (`/frontend`): Web interface for system administration
-- **Agents** (`/agents`): Security and monitoring agents for network devices
-- **Documentation** (`/docs`): System documentation and guides
+- **Agent Management**: Deploy, monitor, and manage autonomous agents
+- **Rule Engine**: Define and enforce rules for agent behavior
+- **Configuration Management**: Centralized configuration management
+- **Monitoring**: Real-time monitoring and alerting
+- **API**: RESTful API for system integration
+- **UI**: React-based web interface
+
+## Architecture
+
+OPMAS follows a microservices architecture with the following components:
+
+- **Core Engine**: Handles agent execution and coordination
+- **Management API**: Provides REST API for system management
+- **Frontend**: React-based web interface
+- **Database**: PostgreSQL for persistent storage
+- **Message Broker**: NATS for inter-service communication
+- **Cache**: Redis for caching and pub/sub
 
 ## Getting Started
 
@@ -16,80 +28,114 @@ OPMAS is a comprehensive platform for managing and securing network infrastructu
 
 - Python 3.10+
 - Node.js 18+
-- PostgreSQL 13+
-- Redis
-- NATS Server
-- Docker & Docker Compose
+- PostgreSQL 14+
+- Redis 6+
+- NATS 2.8+
+- Docker and Docker Compose
 
-### Development Setup
+### Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/your-org/opmas.git
-cd opmas
+   ```bash
+   git clone https://github.com/your-org/opmas.git
+   cd opmas
+   ```
+
+2. Set up the development environment:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Install dependencies:
+   ```bash
+   # Management API
+   cd management_api
+   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
+
+   # Frontend
+   cd ../ui
+   npm install
+   ```
+
+4. Start the services:
+   ```bash
+   # Management API
+   cd management_api
+   python run.py
+
+   # Frontend
+   cd ../ui
+   npm run dev
+   ```
+
+## Development
+
+### Project Structure
+
+```
+OPMAS/
+├── .github/                    # GitHub workflows
+├── docs/                       # Project documentation
+│   ├── architecture/          # Architecture decisions
+│   ├── api/                   # API documentation
+│   └── development/           # Development guides
+├── scripts/                    # Shared scripts
+├── core/                      # Core automation engine
+├── management_api/            # Management API
+├── ui/                        # UI interface
+├── docker-compose.yml         # Development environment
+└── pyproject.toml            # Root Python config
 ```
 
-2. Set up the Management API:
+### Development Guidelines
+
+- Follow the coding standards in `docs/development/coding-standards.md`
+- Write tests for all new features
+- Update documentation for significant changes
+- Use conventional commits for commit messages
+
+### Testing
+
 ```bash
+# Management API
 cd management_api
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp example.env .env
-./setup.sh
+pytest
+
+# Frontend
+cd ui
+npm test
 ```
 
-3. Set up the Frontend:
+### Linting
+
 ```bash
-cd frontend
-npm install
-cp .env.example .env
+# Management API
+cd management_api
+flake8 .
+black .
+isort .
+mypy .
+
+# Frontend
+cd ui
+npm run lint
+npm run type-check
 ```
 
-4. Start the development environment:
-```bash
-docker-compose up -d
-```
+## Documentation
 
-## Development Workflow
-
-1. Create a new branch for your feature:
-```bash
-git checkout -b feature/your-feature-name
-```
-
-2. Make your changes and commit them:
-```bash
-git add .
-git commit -m "Description of your changes"
-```
-
-3. Push your changes:
-```bash
-git push origin feature/your-feature-name
-```
-
-4. Create a Pull Request
-
-## Project Structure
-
-```
-opmas/
-├── management_api/     # Management API service
-├── backend/           # Core backend services
-├── frontend/          # Web interface
-├── agents/            # Security and monitoring agents
-├── docs/             # Documentation
-└── k8s/              # Kubernetes manifests
-```
+- [Architecture Documentation](docs/architecture/README.md)
+- [API Documentation](docs/api/README.md)
+- [Development Guide](docs/development/README.md)
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch
+2. Create a feature branch
 3. Commit your changes
 4. Push to the branch
-5. Open a Pull Request
+5. Create a Pull Request
 
 ## License
 
@@ -99,4 +145,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Your Name - your.email@example.com
 
-Project Link: [https://github.com/your-org/opmas](https://github.com/your-org/opmas) 
+Project Link: [https://github.com/your-org/opmas](https://github.com/your-org/opmas)

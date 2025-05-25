@@ -25,4 +25,4 @@ services:
     restart: unless-stopped # Optional: Restart Postgres if it stops unexpectedly
 
 volumes:
-  opmas_pgdata: # Define the named volume for PostgreSQL data persistence 
+  opmas_pgdata: # Define the named volume for PostgreSQL data persistence

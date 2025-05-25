@@ -94,4 +94,12 @@ frontend/.next/
 frontend/.nuxt/
 frontend/.output/
 frontend/dist/
-frontend/build/ 
+frontend/build/
+
+# UI
+ui/node_modules/
+ui/.next/
+ui/.nuxt/
+ui/.output/
+ui/dist/
+ui/build/

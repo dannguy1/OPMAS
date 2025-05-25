@@ -1,16 +1,18 @@
 """Playbook management models."""
 
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, JSON, ForeignKey, Index
+
+from opmas_mgmt_api.db.base_class import Base
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
-from opmas_mgmt_api.db.base_class import Base
 
 class Playbook(Base):
     """Playbook model."""
+
     __tablename__ = "playbooks"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -26,7 +28,9 @@ class Playbook(Base):
     execution_count = Column(Integer, default=0)
 
     # Relationships
-    executions = relationship("PlaybookExecution", back_populates="playbook", cascade="all, delete-orphan")
+    executions = relationship(
+        "PlaybookExecution", back_populates="playbook", cascade="all, delete-orphan"
+    )
 
     # Indexes
     __table_args__ = (
@@ -48,11 +52,13 @@ class Playbook(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_executed": self.last_executed.isoformat() if self.last_executed else None,
-            "execution_count": self.execution_count
+            "execution_count": self.execution_count,
         }
+
 
 class PlaybookExecution(Base):
     """Playbook execution model."""
+
     __tablename__ = "playbook_executions"
 
     id = Column(PGUUID, primary_key=True, default=uuid4)
@@ -84,5 +90,5 @@ class PlaybookExecution(Base):
             "status": self.status,
             "error": self.error,
             "steps": self.steps,
-            "metadata": self.execution_metadata
-        } 
+            "metadata": self.execution_metadata,
+        }

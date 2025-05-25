@@ -29,4 +29,4 @@ ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
 # Run the application
-CMD ["python", "-m", "opmas.main"] 
+CMD ["python", "-m", "opmas.main"]
