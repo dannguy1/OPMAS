@@ -4,139 +4,154 @@
 
 ```mermaid
 graph TB
-    subgraph "OpenWRT Devices"
-        Device1[OpenWRT Device 1]
-        Device2[OpenWRT Device 2]
-        DeviceN[OpenWRT Device N]
-    end
-
-    subgraph "OPMAS Core"
-        LogAPI[Log Ingestion API]
-        Parser[Log Parser]
-        subgraph "Domain Agents"
-            WiFiAgent[WiFi Agent]
-            SecurityAgent[Security Agent]
-            HealthAgent[Health Agent]
-            WANAgent[WAN Agent]
-        end
-        Orch[Orchestrator]
-        Exec[Action Executor]
+    subgraph "User Facing"
+        Frontend_UI["Frontend UI (React, TypeScript)"]
     end
 
     subgraph "Management Layer"
-        MgmtAPI[Management API]
-        Frontend[Frontend UI]
+        direction LR
+        Mgmt_API["Management API (FastAPI, Python)"]
+        subgraph "System Control"
+            direction TB
+            Start_Script["backend/start_opmas.sh"]
+        end
     end
 
-    subgraph "Data Storage"
-        DB[(PostgreSQL)]
-        NATS[(NATS Message Bus)]
+    subgraph "OPMAS Backend"
+        direction TB
+        subgraph "Log Ingestion"
+            direction LR
+            Log_API_HTTP["Log Ingestion API (HTTP)"]
+            Parsing_Utils["(parsing_utils.py)"]
+            Syslog_UDP["Syslog UDP Ingestor (Designed)"]
+            Async_Queue["(asyncio.Queue)"]
+            Parser_UDP["Parser (UDP Path - Designed)"]
+            Syslog_TCP["Syslog TCP Ingestor (Designed)"]
+            NATS_Raw_Logs["NATS (logs.parsed.raw)"]
+            Parser_TCP["Parser (TCP Path - Designed)"]
+        end
+        subgraph "Agents System"
+            direction LR
+            subgraph "Domain Agents"
+                direction TB
+                WiFiAgent["WiFi Agent"]
+                SecurityAgent["Security Agent"]
+                OtherAgents["... Other Agents"]
+            end
+        end
+        Orchestrator_Active["Orchestrator (Active)"]
+        ActionExecutor["Action Executor (Future Scope)"]
     end
 
-    subgraph "Testing Framework"
-        UnitTests[Unit Tests]
-        IntegrationTests[Integration Tests]
-        TestDB[(Test Database)]
+    subgraph "Shared Services"
+        direction LR
+        NATS_Bus["NATS Message Bus"]
+        PostgreSQL_DB["PostgreSQL Database"]
     end
 
-    %% Core Connections
-    Device1 -->|Syslog| LogAPI
-    Device2 -->|Syslog| LogAPI
-    DeviceN -->|Syslog| LogAPI
-    LogAPI -->|Raw Logs| Parser
-    Parser -->|Parsed Logs| NATS
-    NATS -->|Filtered Logs| WiFiAgent
-    NATS -->|Filtered Logs| SecurityAgent
-    NATS -->|Filtered Logs| HealthAgent
-    NATS -->|Filtered Logs| WANAgent
-    WiFiAgent -->|Findings| NATS
-    SecurityAgent -->|Findings| NATS
-    HealthAgent -->|Findings| NATS
-    WANAgent -->|Findings| NATS
-    NATS -->|Findings| Orch
-    Orch -->|Actions| Exec
-    Exec -->|Commands| Device1
-    Exec -->|Commands| Device2
-    Exec -->|Commands| DeviceN
+    subgraph "External Systems"
+        Device1["OpenWRT Device 1"]
+        Device2["OpenWRT Device 2"]
+        DeviceN["... Device N"]
+    end
 
-    %% Storage Connections
-    Orch -->|Findings| DB
-    Exec -->|Results| DB
-    MgmtAPI -->|Config| DB
-    Frontend -->|Data| DB
+    %% UI to Management API
+    Frontend_UI -->|HTTP REST Calls| Mgmt_API
 
-    %% Testing Connections
-    UnitTests -->|Test| LogAPI
-    UnitTests -->|Test| Parser
-    UnitTests -->|Test| WiFiAgent
-    UnitTests -->|Test| SecurityAgent
-    UnitTests -->|Test| HealthAgent
-    UnitTests -->|Test| WANAgent
-    IntegrationTests -->|Test| Orch
-    IntegrationTests -->|Test| Exec
-    UnitTests -->|Test| TestDB
-    IntegrationTests -->|Test| TestDB
+    %% Management API Interactions
+    Mgmt_API -->|Reads/Writes Config, Findings, Users| PostgreSQL_DB
+    Mgmt_API -->|Executes| Start_Script
+    Mgmt_API <-->|Real-time updates / Commands?| NATS_Bus
 
-    classDef device fill:#f9f,stroke:#333,stroke-width:2px
-    classDef core fill:#bbf,stroke:#333,stroke-width:2px
-    classDef storage fill:#fbb,stroke:#333,stroke-width:2px
-    classDef management fill:#bfb,stroke:#333,stroke-width:2px
-    classDef testing fill:#fbf,stroke:#333,stroke-width:2px
+    %% Log Ingestion Paths
+    Device1 -->|Syslog| Log_API_HTTP
+    Device2 -->|Syslog| Syslog_UDP
+    DeviceN -->|Syslog| Syslog_TCP
 
-    class Device1,Device2,DeviceN device
-    class LogAPI,Parser,WiFiAgent,SecurityAgent,HealthAgent,WANAgent,Orch,Exec core
-    class DB,NATS storage
-    class MgmtAPI,Frontend management
-    class UnitTests,IntegrationTests,TestDB testing
+    Log_API_HTTP -->|Uses| Parsing_Utils
+    Parsing_Utils -->|ParsedLogEvent (logs.wifi, etc.)| NATS_Bus
+
+    Syslog_UDP -->|Raw Log| Async_Queue
+    Async_Queue -->|Raw Log| Parser_UDP
+    Parser_UDP -->|ParsedLogEvent (logs.type)| NATS_Bus
+
+    Syslog_TCP -->|Raw Log JSON| NATS_Raw_Logs
+    NATS_Raw_Logs -->|Raw Log JSON| Parser_TCP
+    Parser_TCP -->|ParsedLogEvent (logs.type)| NATS_Bus
+
+    %% Agent Processing
+    NATS_Bus --o|ParsedLogEvent (logs.wifi)| WiFiAgent
+    NATS_Bus --o|ParsedLogEvent (logs.security)| SecurityAgent
+    NATS_Bus --o|ParsedLogEvent (logs.type)| OtherAgents
+
+    WiFiAgent -->|AgentFinding (findings.wifi)| NATS_Bus
+    SecurityAgent -->|AgentFinding (findings.security)| NATS_Bus
+    OtherAgents -->|AgentFinding (findings.type)| NATS_Bus
+
+    %% Orchestrator (Active)
+    NATS_Bus --o|AgentFinding (findings.>)| Orchestrator_Active
+    Orchestrator_Active -->|Reads Agent Config| PostgreSQL_DB
+    Orchestrator_Active -->|Writes Findings| PostgreSQL_DB
+    %% Note: Current Orchestrator does not execute playbooks or create IntendedActions.
+
+    %% Styling
+    classDef userfacing fill:#D1E8E2,stroke:#333,stroke-width:2px
+    classDef management fill:#A2D2FF,stroke:#333,stroke-width:2px
+    classDef backend fill:#FFDAB9,stroke:#333,stroke-width:2px
+    classDef shared fill:#BDE0FE,stroke:#333,stroke-width:2px
+    classDef external fill:#E0E0E0,stroke:#333,stroke-width:2px
+    classDef future fill:#lightgrey,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+
+    class Frontend_UI userfacing
+    class Mgmt_API,Start_Script management
+    class Log_API_HTTP,Parsing_Utils,Syslog_UDP,Async_Queue,Parser_UDP,Syslog_TCP,NATS_Raw_Logs,Parser_TCP,WiFiAgent,SecurityAgent,OtherAgents,Orchestrator_Active backend
+    class ActionExecutor future
+    class NATS_Bus,PostgreSQL_DB shared
+    class Device1,Device2,DeviceN external
 ```
 
 ## Component Descriptions
 
-### OpenWRT Devices
-- Network devices running OpenWRT
-- Configured to forward logs via syslog
-- Accessible via SSH for action execution
+### External Systems (OpenWRT Devices)
+- Network devices, typically running OpenWRT.
+- Forward logs via Syslog to configured OPMAS ingestion points.
+- Target for potential future actions executed by the `Action Executor`.
 
-### OPMAS Core
-1. **Log Ingestion API**
-   - Receives syslog messages from devices
-   - Validates and timestamps incoming logs
-   - Forwards to Log Parser
-
-2. **Log Parser**
-   - Parses raw log messages
-   - Classifies logs by type
-   - Publishes to NATS topics
-
-3. **Domain Agents**
-   - Subscribe to relevant log topics
-   - Apply domain-specific rules
-   - Generate findings
-
-4. **Orchestrator**
-   - Processes agent findings
-   - Consults playbooks
-   - Decides on actions
-
-5. **Action Executor**
-   - Executes commands on devices
-   - Manages SSH connections
-   - Reports results
+### OPMAS Backend
+1.  **Log Ingestion (Multiple Paths):**
+    *   **Log Ingestion API (HTTP):** The default active path. Receives logs via HTTP, uses `parsing_utils.py` for parsing, and publishes structured `ParsedLogEvent` messages to specific NATS topics (e.g., `logs.wifi`, `logs.generic`).
+    *   **Syslog UDP Ingestor (Designed):** Listens for UDP Syslog messages, places them on an internal `asyncio.Queue`. A dedicated parser component (`Parser (UDP Path)`) would then process these queue messages and publish `ParsedLogEvent` messages to NATS. Not active by default.
+    *   **Syslog TCP Ingestor (Designed):** Listens for TCP Syslog messages, publishes raw-ish JSON to a specific NATS topic (`logs.parsed.raw`). A dedicated parser component (`Parser (TCP Path)`) subscribes to this topic, processes the messages, and publishes `ParsedLogEvent` messages to NATS. Not active by default.
+2.  **Domain Agents (e.g., WiFiAgent, SecurityAgent):**
+    *   Specialized components that subscribe to relevant `ParsedLogEvent` topics on NATS (e.g., `logs.wifi`).
+    *   Analyze these events based on configurable rules (currently loaded from YAML/env files).
+    *   Publish `AgentFinding` messages to NATS (e.g., `findings.wifi`) when issues are detected.
+3.  **Orchestrator (Active - `backend/src/opmas/orchestrator.py`):**
+    *   Subscribes to all `AgentFinding` messages from NATS (`findings.>`).
+    *   Loads agent configurations from the PostgreSQL database.
+    *   Stores received findings in the PostgreSQL database.
+    *   *Note: The current active orchestrator does not implement playbook processing or `IntendedAction` generation. A distinct `OrchestratorAgent` in `backend/src/opmas/core/orchestrator.py` has designs for these features but is not run by the default startup scripts.*
+4.  **Action Executor (Future Scope):**
+    *   Intended to execute commands on managed devices based on actions determined by the Orchestrator (via playbooks).
+    *   This component is not yet fully implemented or integrated.
 
 ### Management Layer
-1. **Management API**
-   - RESTful API for system control
-   - Configuration management
-   - Status monitoring
+1.  **Management API (`Mgmt_API`):**
+    *   A RESTful API (FastAPI, Python) providing secure (JWT authenticated) endpoints for system management.
+    *   Interacts with PostgreSQL to manage configurations (agents, rules, users, etc.) and retrieve operational data (findings).
+    *   Can publish to and subscribe from NATS for real-time UI updates or sending commands to the backend.
+    *   Controls the lifecycle of backend services by executing `backend/start_opmas.sh`.
+2.  **Frontend UI:**
+    *   A web-based Single Page Application (React, TypeScript).
+    *   Communicates exclusively with the Management API for all data display, configuration, and control tasks.
+    *   Utilizes WebSockets (via Management API) for real-time updates.
 
-2. **Frontend UI**
-   - Web-based interface
-   - Real-time monitoring
-   - Configuration management
-
-### Data Storage
-- **PostgreSQL**
-  - Stores system configuration
-  - Maintains device inventory
-  - Records findings and actions
-  - Manages playbooks and rules
+### Shared Services
+1.  **PostgreSQL Database (`PostgreSQL_DB`):**
+    *   The central persistent data store for OPMAS.
+    *   Stores system configurations (e.g., `opmas_config`, `agents`, `agent_rules`, `playbooks`), operational data (`findings`, `intended_actions`), and user credentials.
+2.  **NATS Message Bus (`NATS_Bus`):**
+    *   High-performance messaging system used for asynchronous communication and decoupling within the OPMAS Backend.
+    *   Facilitates the flow of `ParsedLogEvent` messages from ingestors to agents, and `AgentFinding` messages from agents to the Orchestrator.
+    *   Also used by the Management API for potential command/event relay.
+```
