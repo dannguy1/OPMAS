@@ -1,76 +1,80 @@
 # OPMAS Documentation
 
-This directory contains comprehensive documentation for the OpenWRT Proactive Monitoring Agentic System (OPMAS). The documentation is organized into several categories to help you find the information you need quickly.
+Welcome to the OPMAS documentation. This guide will help you navigate through our comprehensive documentation.
 
-## Directory Structure
+## Quick Links
+
+### Development
+- [Setup Guide](development/setup.md) - Setting up your development environment
+- [Workflow Guide](development/workflow.md) - Development workflow and best practices
+- [Contributing Guide](development/contributing.md) - How to contribute to the project
+- [Recovery Guide](development/recovery.md) - Recovery procedures for common issues
+- [Troubleshooting Guide](development/troubleshooting.md) - Solutions for common problems
+- [Testing Guide](development/testing.md) - Testing strategies and procedures
+
+### Architecture
+- [Architecture Overview](architecture/overview.md) - System architecture and design
+- [Monitoring Guide](architecture/monitoring.md) - System monitoring and alerting
+- [API Documentation](api/README.md) - API endpoints and usage
+
+### Guides
+- [Deployment Guide](guides/deployment.md) - Deployment procedures
+- [UI Implementation Guide](guides/ui-implementation.md) - UI development guidelines
+- [OpenWrt Setup Guide](guides/openwrt-setup.md) - OpenWrt configuration
+- [Test Plan](guides/TEST_PLAN.md) - Detailed test planning and execution
+
+### Security
+- [Security Guide](security/README.md) - Security best practices and procedures
+
+### Documentation
+- [Style Guide](STYLE_GUIDE.md) - Documentation writing guidelines
+- [Changelog](CHANGELOG.md) - Documentation version history
+
+## Documentation Structure
 
 ```
 docs/
-├── specifications/     # Design specifications and requirements
-├── api/                # API documentation
-├── guides/             # Implementation and setup guides
-├── architecture/       # Architecture and system design
-└── diagrams/           # System diagrams and visual documentation
+├── architecture/     # System architecture documentation
+│   ├── overview.md
+│   └── monitoring.md
+├── api/             # API documentation
+├── development/     # Development guides and procedures
+│   ├── setup.md
+│   ├── workflow.md
+│   ├── contributing.md
+│   ├── recovery.md
+│   ├── troubleshooting.md
+│   └── testing.md
+├── security/        # Security documentation
+├── guides/          # Implementation guides
+│   ├── deployment.md
+│   ├── ui-implementation.md
+│   ├── openwrt-setup.md
+│   └── TEST_PLAN.md
+├── STYLE_GUIDE.md   # Documentation style guide
+├── CHANGELOG.md     # Documentation version history
+└── README.md        # This file
 ```
 
-## Documentation Categories & Cross-References
+## Contributing to Documentation
 
-### Specifications
+1. Follow the [Contributing Guide](development/contributing.md)
+2. Use Markdown for all documentation
+3. Include code examples where appropriate
+4. Keep documentation up to date with code changes
+5. Follow the [Style Guide](STYLE_GUIDE.md)
 
-Core design specifications and requirements for the system:
+## Support
 
-- [`specifications/OPMAS-DS.md`](specifications/OPMAS-DS.md) — Main design specification document outlining the system's goals, architecture, and components. See also: [`architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md), [`guides/DEVELOPMENT_SETUP.md`](../guides/DEVELOPMENT_SETUP.md)
-- [`specifications/OPMAS-Backend-DS.md`](specifications/OPMAS-Backend-DS.md) — Detailed specification for the core backend components. See also: [`architecture/DATABASE_SCHEMA.md`](../architecture/DATABASE_SCHEMA.md), [`api/API_DOCUMENTATION.md`](../api/API_DOCUMENTATION.md)
-- [`specifications/OPMAS-Frontend-DS.md`](specifications/OPMAS-Frontend-DS.md) — Frontend UI design specification. See also: [`guides/UI-Implementation-Guidelines.md`](../guides/UI-Implementation-Guidelines.md), [`api/API_DOCUMENTATION.md`](../api/API_DOCUMENTATION.md)
-- [`specifications/OPMAS-Management-API-DS.md`](specifications/OPMAS-Management-API-DS.md) — Management API design specification. See also: [`api/API_DOCUMENTATION.md`](../api/API_DOCUMENTATION.md)
+For documentation issues or improvements:
+1. Create an issue in the repository
+2. Tag it with the `documentation` label
+3. Follow the issue template
 
-### API Documentation
+## License
 
-API-related documentation:
+This documentation is part of the OPMAS project and is subject to the same license terms.
 
-- [`api/API_DOCUMENTATION.md`](api/API_DOCUMENTATION.md) — Main API reference documentation. See also: [`specifications/OPMAS-Management-API-DS.md`](../specifications/OPMAS-Management-API-DS.md)
-- [`api/LOG_INGESTION_API.md`](api/LOG_INGESTION_API.md) — Detailed documentation for the Log Ingestion API. See also: [`specifications/OPMAS-Backend-DS.md`](../specifications/OPMAS-Backend-DS.md)
-
-### Guides
-
-Implementation and setup guides:
-
-- [`guides/DEVELOPMENT_SETUP.md`](guides/DEVELOPMENT_SETUP.md) — Guide for setting up the development environment. See also: [`guides/DEPLOYMENT.md`](DEPLOYMENT.md), [`specifications/OPMAS-DS.md`](../specifications/OPMAS-DS.md)
-- [`guides/DEPLOYMENT.md`](guides/DEPLOYMENT.md) — Deployment procedures and strategies. See also: [`guides/DEVELOPMENT_SETUP.md`](DEVELOPMENT_SETUP.md), [`guides/SECURITY.md`](SECURITY.md)
-- [`guides/MONITORING.md`](guides/MONITORING.md) — System monitoring and alerting configuration. See also: [`guides/DEPLOYMENT.md`](DEPLOYMENT.md)
-- [`guides/TESTING_STRATEGY.md`](guides/TESTING_STRATEGY.md) — Testing approach and procedures. See also: [`guides/DEVELOPMENT_SETUP.md`](DEVELOPMENT_SETUP.md)
-- [`guides/SECURITY.md`](guides/SECURITY.md) — Security guidelines and best practices. See also: [`architecture/ARCHITECTURE.md`](../architecture/ARCHITECTURE.md)
-- [`guides/OPENWRT_SETUP.md`](guides/OPENWRT_SETUP.md) — Guide for setting up OpenWRT devices. See also: [`specifications/OPMAS-DS.md`](../specifications/OPMAS-DS.md)
-- [`guides/UI-Implementation-Guidelines.md`](guides/UI-Implementation-Guidelines.md) — Frontend implementation guidelines. See also: [`specifications/OPMAS-Frontend-DS.md`](../specifications/OPMAS-Frontend-DS.md)
-
-### Architecture
-
-System architecture and design documentation:
-
-- [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — Comprehensive system architecture overview. See also: [`specifications/OPMAS-DS.md`](../specifications/OPMAS-DS.md), [`architecture/DATABASE_SCHEMA.md`](DATABASE_SCHEMA.md)
-- [`architecture/DATABASE_SCHEMA.md`](architecture/DATABASE_SCHEMA.md) — Database schema and data models. See also: [`specifications/OPMAS-Backend-DS.md`](../specifications/OPMAS-Backend-DS.md)
-
-### Diagrams
-
-Visual documentation and diagrams:
-
-- System architecture diagrams
-- Component interaction diagrams
-- Data flow diagrams
-- Deployment diagrams
-
-## Documentation Maintenance
-
-- All documentation should be kept up-to-date with code changes
-- Use Markdown format for all documentation files
-- Include diagrams in the `diagrams/` directory
-- Update this README when adding new documentation
-
-## Contributing
-
-When adding new documentation:
-
-1. Place it in the appropriate category directory
-2. Update this README to include the new document
-3. Ensure it follows the established format and style
-4. Include any necessary diagrams in the `diagrams/` directory 
+---
+Version: 1.0.0
+Last Updated: 2024-03-20
