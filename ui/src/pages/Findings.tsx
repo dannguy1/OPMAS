@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import {
   MagnifyingGlassIcon,
-  FunnelIcon,
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';

@@ -4,9 +4,15 @@ import logging
 import time
 from typing import Any, Callable
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+import os
+from dotenv import load_dotenv
 from opmas_mgmt_api.api.v1.endpoints import (
     actions,
     agents,
@@ -15,12 +21,10 @@ from opmas_mgmt_api.api.v1.endpoints import (
     devices,
     findings,
     rules,
-    websocket,
 )
 from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.db.init_db import init_db
-from opmas_mgmt_api.services.websocket import WebSocketManager
 
 # Configure logging
 logging.basicConfig(
@@ -39,11 +43,18 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://192.168.10.8:3000"],  # Frontend URL
+    allow_origins=["*"],  # In production, replace with specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# JWT Configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.middleware("http")
@@ -85,10 +96,6 @@ async def startup_event() -> None:
         nats_manager = NATSManager()
         await nats_manager.connect()
         logger.info("NATS connection established")
-
-        # Initialize WebSocket manager
-        websocket_manager = WebSocketManager()
-        logger.info("WebSocket manager initialized")
 
     except Exception as e:
         logger.error(f"Error during startup: {e}")
@@ -132,7 +139,6 @@ app.include_router(devices.router, prefix="/api/v1", tags=["devices"])
 app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
 app.include_router(rules.router, prefix="/api/v1", tags=["rules"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
-app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
 app.include_router(findings.router, prefix="", tags=["findings"])
 app.include_router(actions.router, prefix="", tags=["actions"])
 

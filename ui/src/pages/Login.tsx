@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export const Login: React.FC = () => {

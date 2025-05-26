@@ -5,7 +5,6 @@ import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  PlusIcon,
 } from '@heroicons/react/24/outline';
 import { ActionDetailsModal } from '../components/actions/ActionDetailsModal';
 import { NewActionModal } from '../components/actions/NewActionModal';

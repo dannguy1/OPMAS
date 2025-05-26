@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { XMarkIcon, PencilIcon, CheckIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';

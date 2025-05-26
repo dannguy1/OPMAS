@@ -1,41 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { useNavigate, Outlet } from 'react-router-dom';
+import { authApi } from '../services/api';
+import { User } from '../types';
 import { toast } from 'react-hot-toast';
 
-interface User {
-  id: string;
-  username: string;
-  role: string;
-}
-
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-}
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+type AuthProviderProps = {
+  children: React.ReactNode;
+};
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('token');
       if (token) {
         try {
-          // Verify token and get user info
-          const response = await api.auth.refreshToken();
-          setUser(response.user);
+          const user = await authApi.getCurrentUser();
+          setUser(user);
         } catch (error) {
-          // Clear invalid token
-          localStorage.removeItem('auth_token');
+          localStorage.removeItem('token');
           setUser(null);
         }
       }
@@ -45,13 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await api.auth.login(username, password);
-      localStorage.setItem('auth_token', response.token);
-      setUser(response.user);
+      const response = await authApi.login(email, password);
+      localStorage.setItem('token', response.access_token);
+      const user = await authApi.getCurrentUser();
+      setUser(user);
       toast.success('Login successful');
-      navigate('/dashboard');
+      navigate('/');
     } catch (error) {
       toast.error('Login failed. Please check your credentials.');
       throw error;
@@ -60,17 +57,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await api.auth.logout();
+      await authApi.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       setUser(null);
       navigate('/login');
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
@@ -78,10 +75,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <Outlet />
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
