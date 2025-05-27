@@ -21,6 +21,8 @@ from opmas_mgmt_api.api.v1.endpoints import (
     devices,
     findings,
     rules,
+    playbooks,
+    system,
 )
 from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.core.nats import NATSManager
@@ -45,10 +47,10 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["http://192.168.10.8:3000"],  # Explicitly allow frontend origin
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # JWT Configuration
@@ -143,6 +145,8 @@ app.include_router(rules.router, prefix=f"{settings.API_V1_STR}/rules", tags=["r
 app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
 app.include_router(findings.router, prefix=f"{settings.API_V1_STR}/findings", tags=["findings"])
 app.include_router(actions.router, prefix=f"{settings.API_V1_STR}/actions", tags=["actions"])
+app.include_router(playbooks.router, prefix=f"{settings.API_V1_STR}/playbooks", tags=["playbooks"])
+app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"])
 
 
 @app.get("/")

@@ -16,7 +16,7 @@ from opmas_mgmt_api.schemas.system import (
     SystemMetrics,
     SystemStatus,
 )
-from sqlalchemy import select, text, update
+from sqlalchemy import select, text, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -277,3 +277,63 @@ class SystemService:
         except Exception as e:
             logger.error(f"NATS health check failed: {e}")
             return {"status": "unhealthy", "message": str(e)}
+
+    async def list_systems(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        search: Optional[str] = None,
+        sort_by: str = "version",
+        sort_direction: str = "asc",
+    ) -> Dict[str, Any]:
+        """List system configurations with optional filtering."""
+        query = select(SystemConfigModel)
+
+        # Apply search filter
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                or_(
+                    SystemConfigModel.version.ilike(search_term),
+                    SystemConfigModel.components.cast(String).ilike(search_term),
+                )
+            )
+
+        # Apply sorting
+        valid_sort_fields = {
+            "version": SystemConfigModel.version,
+            "created_at": SystemConfigModel.created_at,
+            "updated_at": SystemConfigModel.updated_at,
+        }
+
+        sort_column = valid_sort_fields.get(sort_by, SystemConfigModel.version)
+        if sort_direction.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+        # Get total count
+        count_query = select(SystemConfigModel.id).select_from(query.subquery())
+        result = await self.db.execute(count_query)
+        total = len(result.scalars().all())
+
+        # Apply pagination
+        query = query.offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        configs = result.scalars().all()
+
+        return {
+            "items": [
+                SystemConfig(
+                    version=config.version,
+                    components=config.components,
+                    security=config.security,
+                    logging=config.logging,
+                    timestamp=config.updated_at,
+                )
+                for config in configs
+            ],
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
