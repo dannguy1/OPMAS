@@ -103,29 +103,51 @@ Key changes from previous structure:
 *   **Key Components:**
     *   `src/opmas_mgmt_api/`: FastAPI application code.
     *   **Endpoints:** Exposes endpoints for:
-        *   Reading system status (potentially querying running processes or Docker status).
-        *   Starting/Stopping the system (likely by invoking `core/start_opmas.sh`).
-        *   CRUD operations for `agents`, `agent_rules`, `playbooks`, `playbook_steps` tables in the database.
-        *   Reading (with filtering/pagination) from `findings` and `intended_actions` tables.
-        *   Reading/Updating `opmas_config` table entries.
+        *   Reading system status and configuration
+        *   CRUD operations for `agents`, `agent_rules`, `playbooks`, `playbook_steps` tables in the database
+        *   Reading (with filtering/pagination) from `findings` and `intended_actions` tables
+        *   Reading/Updating `opmas_config` table entries
+        *   All list endpoints support:
+            * Search functionality (filtering by name/description)
+            * Sorting by any column
+            * Pagination (skip/limit)
+            * Direction control (asc/desc)
+    *   **Common Features:**
+        *   Consistent response format with pagination metadata
+        *   Standardized error handling
+        *   Input validation using Pydantic models
+        *   Type safety with Python type hints
 *   **Interactions:**
-    *   Communicates with the Frontend UI via HTTP/REST.
-    *   Interacts directly with the PostgreSQL database (likely reusing `db_models` and `db_utils` from `core/` or having its own access logic).
-    *   May execute shell commands (like `start_opmas.sh`) for control functions.
-*   **Technology:** Python, FastAPI, PostgreSQL (via SQLAlchemy), Pydantic.
+    *   Communicates with the Frontend UI via HTTP/REST
+    *   Interacts directly with the PostgreSQL database using SQLAlchemy
+    *   Uses dependency injection for database and NATS manager instances
+*   **Technology:** Python, FastAPI, PostgreSQL (via SQLAlchemy), Pydantic, NATS (for event publishing)
 
 ## 5. Frontend UI (`ui/`)
 
 *   **Purpose:** Presents a graphical interface to the user, allowing them to monitor OPMAS, manage configurations, and view results by interacting with the Management API.
 *   **Key Components:**
-    *   A single-page application (SPA) built with React (or similar framework).
-    *   Components for different views: Dashboard, Configuration Editors (Agents, Rules, Playbooks), Results Viewers (Findings, Actions).
-    *   Uses an HTTP client (`axios`, `fetch`) to make requests to the Management API.
+    *   A single-page application (SPA) built with React and TypeScript
+    *   Components for different views:
+        *   Dashboard: System overview and metrics
+        *   Rules: Rule management with search and sort
+        *   Systems: System configuration management
+        *   Agents: Agent management and monitoring
+        *   Devices: Device inventory and status
+        *   Findings: View and filter findings
+        *   Playbooks: Playbook management
+    *   Common UI Features:
+        *   Search functionality across all list views
+        *   Sortable columns with direction control
+        *   Pagination controls
+        *   Consistent layout with sidebar navigation
+        *   Responsive design
+    *   Uses Axios for HTTP requests to the Management API
 *   **Interactions:**
-    *   Sends HTTP requests to the Management API (`/api/...` endpoints).
-    *   Renders data received from the API for the user.
-    *   Does **not** interact directly with the database, NATS, or the core backend components.
-*   **Technology:** React, Tailwind CSS (or chosen alternatives), JavaScript/TypeScript, Node.js (for build tooling).
+    *   Sends HTTP requests to the Management API (`/api/...` endpoints)
+    *   Renders data received from the API for the user
+    *   Does **not** interact directly with the database, NATS, or the core backend components
+*   **Technology:** React, TypeScript, Tailwind CSS, Axios, React Router
 
 ## 6. Shared Services (`core/docker-compose.yaml`)
 
