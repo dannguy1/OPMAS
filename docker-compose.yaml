@@ -1,14 +1,14 @@
 version: '3.8'
 
 services:
-  # Core Backend Services
-  core:
+  # Backend Services
+  backend:
     build:
-      context: ./core
+      context: ./backend
       dockerfile: Dockerfile
     volumes:
-      - ./core:/app
-      - ./core/logs:/app/logs
+      - ./backend:/app
+      - ./backend/logs:/app/logs
     environment:
       - PYTHONPATH=/app
       - OPMAS_CONFIG_PATH=/app/config/opmas_config.yaml
@@ -37,7 +37,7 @@ services:
     volumes:
       - ./management_api/src:/app
     depends_on:
-      - core
+      - backend
     networks:
       - opmas_network
 

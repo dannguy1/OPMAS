@@ -1,6 +1,7 @@
 """User service."""
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from opmas_mgmt_api.core.security import get_password_hash, verify_password
@@ -35,8 +36,14 @@ async def create_user(
 ) -> UserInDB:
     """Create new user."""
     hashed_password = get_password_hash(password)
+    now = datetime.utcnow()
     db_user = User(
-        username=username, email=email, hashed_password=hashed_password, full_name=full_name
+        username=username,
+        email=email,
+        hashed_password=hashed_password,
+        full_name=full_name,
+        created_at=now,
+        updated_at=now,
     )
     db.add(db_user)
     await db.commit()

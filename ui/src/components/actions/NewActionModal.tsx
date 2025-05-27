@@ -33,7 +33,12 @@ export const NewActionModal: React.FC<NewActionModalProps> = ({ isOpen, onClose 
 
   const { data: findings } = useQuery({
     queryKey: ['findings'],
-    queryFn: () => api.get('/findings'),
+    queryFn: () => api.get('/findings', {
+      params: {
+        sort_by: 'created_at',
+        sort_direction: 'desc'
+      }
+    }).then(res => res.data)
   });
 
   const createActionMutation = useMutation({

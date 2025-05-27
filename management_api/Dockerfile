@@ -45,4 +45,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "opmas_mgmt_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python -m src.opmas_mgmt_api.db.init_db && uvicorn opmas_mgmt_api.main:app --host 0.0.0.0 --port 8000"]

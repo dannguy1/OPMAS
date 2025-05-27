@@ -7,9 +7,32 @@ from opmas_mgmt_api.models.action import Action
 from opmas_mgmt_api.schemas.action import ActionCreate, ActionUpdate
 from sqlalchemy import asc, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, status
 
 logger = logging.getLogger(__name__)
 
+# Define valid sort fields (in snake_case)
+VALID_SORT_FIELDS = {
+    "created_at",
+    "updated_at",
+    "due_date",
+    "title",
+    "priority",
+    "status",
+    "finding_id",
+    "assigned_to",
+    "completed_at",
+}
+
+# Map camelCase to snake_case for sort fields
+CAMEL_TO_SNAKE = {
+    "createdAt": "created_at",
+    "updatedAt": "updated_at",
+    "dueDate": "due_date",
+    "findingId": "finding_id",
+    "assignedTo": "assigned_to",
+    "completedAt": "completed_at",
+}
 
 class ActionService:
     """Service for managing remediation actions."""
@@ -37,6 +60,9 @@ class ActionService:
 
         Returns:
             List of actions matching the criteria
+
+        Raises:
+            HTTPException: If sort parameters are invalid
         """
         query = select(Action)
 
@@ -53,8 +79,23 @@ class ActionService:
         if status:
             query = query.where(Action.status == status)
 
+        # Convert sort field to snake_case if needed
+        sort_by = CAMEL_TO_SNAKE.get(sort_by, sort_by)
+
+        # Validate sort parameters
+        if sort_by not in VALID_SORT_FIELDS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid sort field. Must be one of: {', '.join(sorted(VALID_SORT_FIELDS))}",
+            )
+        if sort_direction.lower() not in ["asc", "desc"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid sort direction. Must be either 'asc' or 'desc'",
+            )
+
         # Apply sorting
-        sort_column = getattr(Action, sort_by, Action.due_date)
+        sort_column = getattr(Action, sort_by)
         if sort_direction.lower() == "desc":
             query = query.order_by(desc(sort_column))
         else:

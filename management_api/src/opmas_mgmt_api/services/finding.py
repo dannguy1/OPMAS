@@ -7,9 +7,33 @@ from opmas_mgmt_api.models.finding import Finding
 from opmas_mgmt_api.schemas.finding import FindingCreate, FindingUpdate
 from sqlalchemy import asc, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, status
 
 logger = logging.getLogger(__name__)
 
+# Define valid sort fields (in snake_case)
+VALID_SORT_FIELDS = {
+    "created_at",
+    "updated_at",
+    "resolved_at",
+    "title",
+    "severity",
+    "status",
+    "source",
+    "device_id",
+    "agent_id",
+    "rule_id",
+}
+
+# Map camelCase to snake_case for sort fields
+CAMEL_TO_SNAKE = {
+    "createdAt": "created_at",
+    "updatedAt": "updated_at",
+    "resolvedAt": "resolved_at",
+    "deviceId": "device_id",
+    "agentId": "agent_id",
+    "ruleId": "rule_id",
+}
 
 class FindingService:
     """Service for managing security findings."""
@@ -37,6 +61,9 @@ class FindingService:
 
         Returns:
             List of findings matching the criteria
+
+        Raises:
+            HTTPException: If sort parameters are invalid
         """
         query = select(Finding)
 
@@ -53,8 +80,23 @@ class FindingService:
         if status:
             query = query.where(Finding.status == status)
 
+        # Convert sort field to snake_case if needed
+        sort_by = CAMEL_TO_SNAKE.get(sort_by, sort_by)
+
+        # Validate sort parameters
+        if sort_by not in VALID_SORT_FIELDS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid sort field. Must be one of: {', '.join(sorted(VALID_SORT_FIELDS))}",
+            )
+        if sort_direction.lower() not in ["asc", "desc"]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Invalid sort direction. Must be either 'asc' or 'desc'",
+            )
+
         # Apply sorting
-        sort_column = getattr(Finding, sort_by, Finding.created_at)
+        sort_column = getattr(Finding, sort_by)
         if sort_direction.lower() == "desc":
             query = query.order_by(desc(sort_column))
         else:

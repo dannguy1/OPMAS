@@ -1,3 +1,5 @@
+"""Alembic environment configuration."""
+
 import asyncio
 import os
 import sys
@@ -11,7 +13,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from opmas_mgmt_api.config import settings
+from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.db.base import Base
 
 # this is the Alembic Config object, which provides
@@ -45,7 +47,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = settings.DATABASE_URL
+    url = settings.SYNC_DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -83,6 +85,11 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
+    """Run migrations in 'online' mode.
+
+    In this scenario we need to create an Engine
+    and associate a connection with the context.
+
+    """
 
     asyncio.run(run_async_migrations())

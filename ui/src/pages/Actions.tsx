@@ -50,13 +50,18 @@ export const Actions: React.FC = () => {
     queryKey: ['actions', searchTerm, selectedPriority, selectedStatus, sortField, sortDirection],
     queryFn: () => api.get('/actions', {
       params: {
-        search: searchTerm,
-        priority: selectedPriority,
-        status: selectedStatus,
-        sortBy: sortField,
-        sortDirection,
-      },
-    }),
+        search: searchTerm || undefined,
+        priority: selectedPriority || undefined,
+        status: selectedStatus || undefined,
+        sort_by: sortField === 'dueDate' ? 'due_date' :
+                sortField === 'createdAt' ? 'created_at' :
+                sortField === 'updatedAt' ? 'updated_at' :
+                sortField === 'findingId' ? 'finding_id' :
+                sortField === 'assignedTo' ? 'assigned_to' :
+                sortField === 'completedAt' ? 'completed_at' : sortField,
+        sort_direction: sortDirection
+      }
+    }).then(res => res.data)
   });
 
   const handleSort = (field: keyof Action) => {
@@ -206,14 +211,14 @@ export const Actions: React.FC = () => {
                         Loading...
                       </td>
                     </tr>
-                  ) : actions?.data?.length === 0 ? (
+                  ) : actions?.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
                         No actions found
                       </td>
                     </tr>
                   ) : (
-                    actions?.data?.map((action: Action) => (
+                    actions?.map((action: Action) => (
                       <tr
                         key={action.id}
                         className="hover:bg-gray-50 cursor-pointer"

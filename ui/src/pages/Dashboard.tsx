@@ -25,12 +25,12 @@ interface RecentActivity {
 export const Dashboard: React.FC = () => {
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
-    queryFn: () => api.get('/api/v1/dashboard/stats').then(res => res.data)
+    queryFn: () => api.get('/dashboard/stats').then(res => res.data)
   });
 
   const { data: recentActivity, isLoading: activityLoading } = useQuery<RecentActivity[]>({
     queryKey: ['recentActivity'],
-    queryFn: () => api.get('/api/v1/dashboard/activity/recent').then(res => res.data)
+    queryFn: () => api.get('/dashboard/activity/recent').then(res => res.data)
   });
 
   if (statsLoading || activityLoading) {

@@ -17,7 +17,15 @@ interface ExportActionsProps {
 export const ExportActions: React.FC<ExportActionsProps> = ({ filters = {} }) => {
   const { data: actions, isLoading } = useQuery({
     queryKey: ['actions', filters],
-    queryFn: () => api.get('/actions', { params: filters }),
+    queryFn: () => api.get('/actions', {
+      params: {
+        search: filters.search || undefined,
+        priority: filters.priority || undefined,
+        status: filters.status || undefined,
+        sort_by: filters.sortBy,
+        sort_direction: filters.sortDirection
+      }
+    }).then(res => res.data)
   });
 
   const handleExport = () => {

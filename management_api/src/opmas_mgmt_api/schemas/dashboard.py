@@ -8,10 +8,10 @@ from pydantic import BaseModel
 class DashboardStats(BaseModel):
     """Dashboard statistics."""
 
-    total_agents: int
-    active_agents: int
-    total_findings: int
-    critical_findings: int
+    totalFindings: int
+    criticalFindings: int
+    totalActions: int
+    pendingActions: int
 
 
 class RecentActivity(BaseModel):

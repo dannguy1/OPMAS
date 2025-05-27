@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { User } from '../types';
 import { toast } from 'react-hot-toast';
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return (
     <AuthContext.Provider value={value}>
-      <Outlet />
+      {children}
     </AuthContext.Provider>
   );
 };

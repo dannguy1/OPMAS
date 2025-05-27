@@ -51,11 +51,21 @@ async def get_dashboard_stats(
             logger.warning(f"Error getting log statistics: {e}")
             log_stats = {"total_logs": 0}
 
+        # Get actions statistics
+        try:
+            actions = await system_service.get_recent_events(100)  # Get last 100 events
+            total_actions = len(actions)
+            pending_actions = len([a for a in actions if a.get("status") == "pending"])
+        except Exception as e:
+            logger.warning(f"Error getting actions statistics: {e}")
+            total_actions = 0
+            pending_actions = 0
+
         return DashboardStats(
-            total_agents=len(agents),
-            active_agents=len(active_agents),
-            total_findings=log_stats.get("total_logs", 0),
-            critical_findings=0,  # TODO: Implement critical findings count
+            totalFindings=log_stats.get("total_logs", 0),
+            criticalFindings=log_stats.get("last_24h", {}).get("error", 0),
+            totalActions=total_actions,
+            pendingActions=pending_actions,
         )
     except Exception as e:
         logger.error(f"Error getting dashboard stats: {e}")

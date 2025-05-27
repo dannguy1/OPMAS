@@ -46,13 +46,18 @@ export const Findings: React.FC = () => {
     queryKey: ['findings', searchTerm, selectedSeverity, selectedStatus, sortField, sortDirection],
     queryFn: () => api.get('/findings', {
       params: {
-        search: searchTerm,
-        severity: selectedSeverity,
-        status: selectedStatus,
-        sortBy: sortField,
-        sortDirection,
-      },
-    }),
+        search: searchTerm || undefined,
+        severity: selectedSeverity || undefined,
+        status: selectedStatus || undefined,
+        sort_by: sortField === 'createdAt' ? 'created_at' : 
+                sortField === 'updatedAt' ? 'updated_at' :
+                sortField === 'resolvedAt' ? 'resolved_at' :
+                sortField === 'deviceId' ? 'device_id' :
+                sortField === 'agentId' ? 'agent_id' :
+                sortField === 'ruleId' ? 'rule_id' : sortField,
+        sort_direction: sortDirection
+      }
+    }).then(res => res.data)
   });
 
   const handleSort = (field: keyof Finding) => {
@@ -191,14 +196,14 @@ export const Findings: React.FC = () => {
                         Loading...
                       </td>
                     </tr>
-                  ) : findings?.data?.length === 0 ? (
+                  ) : findings?.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
                         No findings found
                       </td>
                     </tr>
                   ) : (
-                    findings?.data?.map((finding: Finding) => (
+                    findings?.map((finding: Finding) => (
                       <tr
                         key={finding.id}
                         className="hover:bg-gray-50 cursor-pointer"

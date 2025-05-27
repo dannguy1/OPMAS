@@ -15,21 +15,20 @@ class Settings(BaseSettings):
     """Application settings."""
 
     # API settings
-    API_V1_STR: str = "/api/v1"
-    API_V1_PREFIX: str = "/api/v1"
+    API_V1_STR: str = "/api/v1"  # Base path for all API endpoints
     PROJECT_NAME: str = "OPMAS Management API"
     VERSION: str = "1.0.0"
 
     # Database settings
-    DATABASE_URL: str = "postgresql+asyncpg://opmas:opmas@172.18.0.4:5432/opmas_mgmt"
-    DB_ECHO: bool = False
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 10
+    DATABASE_URL: str = "postgresql+asyncpg://opmas:opmas@postgres:5432/opmas"
+    DB_ECHO: bool = True  # Enable SQL query logging for debugging
+    DB_POOL_SIZE: int = 5  # Reduce pool size for development
+    DB_MAX_OVERFLOW: int = 5
     DB_POOL_TIMEOUT: int = 30
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
 
     # NATS settings
-    NATS_URL: str = "nats://localhost:4222"
+    NATS_URL: str = "nats://nats:4222"
     NATS_CLUSTER_ID: str = "opmas-cluster"
     NATS_USERNAME: Optional[str] = None
     NATS_PASSWORD: Optional[str] = None
