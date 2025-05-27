@@ -7,7 +7,7 @@ from opmas_mgmt_api.core.security import get_password_hash
 from opmas_mgmt_api.db.base import Base
 from opmas_mgmt_api.db.session import async_engine, async_session
 from opmas_mgmt_api.models.user import User
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -42,9 +42,13 @@ async def create_initial_admin(session: AsyncSession) -> None:
 async def init_db() -> None:
     """Initialize the database."""
     try:
-        # Drop and recreate tables
+        # Drop and recreate schema (CASCADE)
         async with async_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
+            await conn.execute(text("DROP SCHEMA public CASCADE;"))
+            await conn.execute(text("CREATE SCHEMA public;"))
+            # await conn.execute(text("GRANT ALL ON SCHEMA public TO postgres;"))
+            # await conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
+            # Now create all tables
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables recreated successfully")
 

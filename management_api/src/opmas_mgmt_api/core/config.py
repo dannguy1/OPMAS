@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # Redis settings
     REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_PASSWORD: Optional[str] = None
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
