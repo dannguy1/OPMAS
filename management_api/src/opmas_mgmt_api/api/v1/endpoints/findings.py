@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/findings", response_model=List[Finding])
+@router.get("", response_model=List[Finding])
 async def get_findings(
     search: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
@@ -54,7 +54,7 @@ async def get_findings(
         )
 
 
-@router.post("/findings", response_model=Finding, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Finding, status_code=status.HTTP_201_CREATED)
 async def create_finding(
     finding: FindingCreate,
     db: AsyncSession = Depends(get_db),
@@ -79,7 +79,7 @@ async def create_finding(
         )
 
 
-@router.get("/findings/{finding_id}", response_model=Finding)
+@router.get("/{finding_id}", response_model=Finding)
 async def get_finding(
     finding_id: str,
     db: AsyncSession = Depends(get_db),
@@ -115,7 +115,7 @@ async def get_finding(
         )
 
 
-@router.put("/findings/{finding_id}", response_model=Finding)
+@router.put("/{finding_id}", response_model=Finding)
 async def update_finding(
     finding_id: str,
     finding: FindingUpdate,
@@ -153,7 +153,7 @@ async def update_finding(
         )
 
 
-@router.delete("/findings/{finding_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{finding_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_finding(
     finding_id: str,
     db: AsyncSession = Depends(get_db),

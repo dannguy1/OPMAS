@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 
 
-@router.get("/actions", response_model=List[Action])
+@router.get("", response_model=List[Action])
 async def get_actions(
     search: Optional[str] = None,
     priority: Optional[str] = None,
@@ -40,7 +40,7 @@ async def get_actions(
         )
 
 
-@router.post("/actions", response_model=Action, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Action, status_code=status.HTTP_201_CREATED)
 async def create_action(
     action: ActionCreate,
     db: AsyncSession = Depends(get_db),
@@ -57,7 +57,7 @@ async def create_action(
         )
 
 
-@router.get("/actions/{action_id}", response_model=Action)
+@router.get("/{action_id}", response_model=Action)
 async def get_action(
     action_id: str,
     db: AsyncSession = Depends(get_db),
@@ -82,7 +82,7 @@ async def get_action(
         )
 
 
-@router.put("/actions/{action_id}", response_model=Action)
+@router.put("/{action_id}", response_model=Action)
 async def update_action(
     action_id: str,
     action: ActionUpdate,
@@ -108,7 +108,7 @@ async def update_action(
         )
 
 
-@router.delete("/actions/{action_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{action_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_action(
     action_id: str,
     db: AsyncSession = Depends(get_db),
