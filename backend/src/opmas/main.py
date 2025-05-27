@@ -2,39 +2,31 @@
 OPMAS Core Main Module
 """
 
+import asyncio
 import logging
+from typing import NoReturn
 
-from .config import get_config, load_config
+from .config import Config, load_config
 
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Main entry point for the OPMAS core service."""
+async def main() -> None:
+    """Main entry point for OPMAS."""
+    config = load_config()
+    logger.info("Starting OPMAS", config=config.model_dump())
+
+
+def run() -> NoReturn:
+    """Run OPMAS."""
     try:
-        # Load configuration
-        config = load_config()
-
-        # Initialize logging
-        logging.basicConfig(
-            level=config.get("logging", {}).get("level", "INFO"),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-
-        logger.info("OPMAS Core service starting...")
-
-        # TODO: Initialize core components
-        # - Database connection
-        # - Message queue
-        # - API server
-        # - Agent system
-
-        logger.info("OPMAS Core service started successfully")
-
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Shutting down OPMAS")
     except Exception as e:
-        logger.error(f"Failed to start OPMAS Core service: {str(e)}")
+        logger.error("OPMAS failed", exc_info=e)
         raise
 
 
 if __name__ == "__main__":
-    main()
+    run()

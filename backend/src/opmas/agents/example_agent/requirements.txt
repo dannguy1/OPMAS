@@ -1,0 +1,5 @@
+# Inherit base agent requirements
+-r ../base_agent_package/requirements.txt
+
+# Additional dependencies for example agent
+pytest-mock==3.12.0

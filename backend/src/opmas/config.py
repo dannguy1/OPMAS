@@ -4,15 +4,26 @@ OPMAS Core Configuration Module
 
 import logging
 import os
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import yaml
+from pydantic import BaseModel, Field
+
+# Install types-PyYAML for type checking
+try:
+    import types_yaml  # type: ignore
+except ImportError:
+    pass
 
 logger = logging.getLogger(__name__)
 
 # Default configuration
 DEFAULT_CONFIG = {
-    "logging": {"level": "INFO", "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    },
     "database": {
         "host": "postgres",
         "port": 5432,
@@ -25,46 +36,57 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_config(config_path: str = None) -> Dict[str, Any]:
-    """
-    Load configuration from file or environment variables.
+class Config(BaseModel):
+    """OPMAS configuration."""
 
-    Args:
-        config_path: Optional path to configuration file
+    nats_url: str = Field(
+        default="nats://localhost:4222",
+        description="NATS server URL",
+    )
+    log_level: str = Field(
+        default="INFO",
+        description="Logging level",
+    )
+    metrics_enabled: bool = Field(
+        default=True,
+        description="Whether to enable metrics collection",
+    )
 
-    Returns:
-        Dict containing configuration
-    """
-    config = DEFAULT_CONFIG.copy()
 
-    # Load from file if provided
-    if config_path and os.path.exists(config_path):
-        try:
-            with open(config_path, "r") as f:
-                file_config = yaml.safe_load(f)
-                config.update(file_config)
-        except Exception as e:
-            logger.error(f"Failed to load config from {config_path}: {str(e)}")
+def load_config(config_path: Optional[str] = None) -> Config:
+    """Load configuration from file or environment variables."""
+    if config_path is None:
+        config_path = os.getenv("OPMAS_CONFIG", "config.yaml")
+
+    config_data: Dict[str, Any] = {}
+
+    # Load from file if it exists
+    if Path(config_path).exists():
+        with open(config_path, "r") as f:
+            config_data = yaml.safe_load(f) or {}
 
     # Override with environment variables
+    env_prefix = "OPMAS_"
     for key, value in os.environ.items():
-        if key.startswith("OPMAS_"):
-            # Convert OPMAS_DATABASE_HOST to database.host
-            parts = key[6:].lower().split("_")
-            if len(parts) > 1:
-                section = parts[0]
-                option = "_".join(parts[1:])
-                if section in config:
-                    config[section][option] = value
+        if key.startswith(env_prefix):
+            config_key = key[len(env_prefix) :].lower()
+            config_data[config_key] = value
 
-    return config
+    return Config(**config_data)
 
 
-def get_config() -> Dict[str, Any]:
+def save_config(config: Config, config_path: str) -> None:
+    """Save configuration to file."""
+    config_data = config.model_dump()
+    with open(config_path, "w") as f:
+        yaml.safe_dump(config_data, f)
+
+
+def get_config() -> Config:
     """
     Get the current configuration.
 
     Returns:
-        Dict containing configuration
+        Config containing configuration
     """
     return load_config()
