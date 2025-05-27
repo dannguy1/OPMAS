@@ -37,6 +37,8 @@ app = FastAPI(
     title="OPMAS Management API",
     description="API for managing OPMAS devices, agents, and rules",
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
@@ -54,7 +56,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
 
 
 @app.middleware("http")
@@ -134,16 +136,21 @@ async def health_check() -> JSONResponse:
 
 
 # Include routers
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(devices.router, prefix="/api/v1", tags=["devices"])
-app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
-app.include_router(rules.router, prefix="/api/v1", tags=["rules"])
-app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
-app.include_router(findings.router, prefix="", tags=["findings"])
-app.include_router(actions.router, prefix="", tags=["actions"])
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
+app.include_router(devices.router, prefix=f"{settings.API_V1_STR}/devices", tags=["devices"])
+app.include_router(agents.router, prefix=f"{settings.API_V1_STR}/agents", tags=["agents"])
+app.include_router(rules.router, prefix=f"{settings.API_V1_STR}/rules", tags=["rules"])
+app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
+app.include_router(findings.router, prefix=f"{settings.API_V1_STR}/findings", tags=["findings"])
+app.include_router(actions.router, prefix=f"{settings.API_V1_STR}/actions", tags=["actions"])
 
 
 @app.get("/")
 async def root():
     """Root endpoint."""
-    return {"message": "Welcome to OPMAS Management API"}
+    return {
+        "message": "Welcome to OPMAS Management API",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "api": settings.API_V1_STR
+    }
