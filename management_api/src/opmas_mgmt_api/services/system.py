@@ -16,7 +16,7 @@ from opmas_mgmt_api.schemas.system import (
     SystemMetrics,
     SystemStatus,
 )
-from sqlalchemy import select, text, update, or_
+from sqlalchemy import or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)

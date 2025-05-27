@@ -6,63 +6,43 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import { FindingDetailsModal } from '../components/findings/FindingDetailsModal';
 
-interface Finding {
+interface Rule {
   id: string;
-  title: string;
+  name: string;
   description: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  status: 'active' | 'inactive' | 'draft';
   created_at: string;
   updated_at: string;
-  device_id: string;
-  source: string;
+  last_triggered: string;
+  category: string;
 }
 
-interface FindingsResponse {
-  items: Finding[];
+interface RulesResponse {
+  items: Rule[];
   total: number;
   skip: number;
   limit: number;
 }
 
-const severityColors = {
-  critical: 'bg-red-100 text-red-800',
-  high: 'bg-orange-100 text-orange-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  low: 'bg-green-100 text-green-800',
-};
-
-const statusColors = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-purple-100 text-purple-800',
-  resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-100 text-gray-800',
-};
-
-export const Findings: React.FC = () => {
+export const Rules: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [sortField, setSortField] = useState<keyof Finding>('created_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
+  const [sortField, setSortField] = useState<keyof Rule>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const { data: findingsData, isLoading } = useQuery<FindingsResponse>({
-    queryKey: ['findings', searchTerm, selectedSeverity, selectedStatus, sortField, sortDirection],
-    queryFn: () => api.get('/findings', {
+  const { data: rulesData, isLoading } = useQuery<RulesResponse>({
+    queryKey: ['rules', searchTerm, sortField, sortDirection],
+    queryFn: () => api.get('/rules', {
       params: {
-        search: searchTerm || undefined,
-        severity: selectedSeverity || undefined,
-        status: selectedStatus || undefined,
+        search: searchTerm,
         sort_by: sortField,
-        sort_direction: sortDirection
+        sort_direction: sortDirection,
       }
     }).then(res => res.data)
   });
 
-  const handleSort = (field: keyof Finding) => {
+  const handleSort = (field: keyof Rule) => {
     if (field === sortField) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -71,7 +51,7 @@ export const Findings: React.FC = () => {
     }
   };
 
-  const SortIcon = ({ field }: { field: keyof Finding }) => {
+  const SortIcon: React.FC<{ field: keyof Rule }> = ({ field }) => {
     if (field !== sortField) return null;
     return sortDirection === 'asc' ? (
       <ArrowUpIcon className="h-4 w-4" />
@@ -80,12 +60,25 @@ export const Findings: React.FC = () => {
     );
   };
 
+  const severityColors = {
+    critical: 'bg-red-100 text-red-800',
+    high: 'bg-orange-100 text-orange-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    low: 'bg-blue-100 text-blue-800',
+  };
+
+  const statusColors = {
+    active: 'bg-green-100 text-green-800',
+    inactive: 'bg-red-100 text-red-800',
+    draft: 'bg-yellow-100 text-yellow-800',
+  };
+
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900">Findings</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">Rules</h2>
         <p className="mt-1 text-sm text-gray-500">
-          View and manage security findings
+          View and manage security rules
         </p>
       </div>
 
@@ -99,34 +92,10 @@ export const Findings: React.FC = () => {
             <input
               type="text"
               className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              placeholder="Search findings..."
+              placeholder="Search rules..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              className="rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={selectedSeverity}
-              onChange={(e) => setSelectedSeverity(e.target.value)}
-            >
-              <option value="">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-            <select
-              className="rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
           </div>
         </div>
       </div>
@@ -142,11 +111,11 @@ export const Findings: React.FC = () => {
                     <th
                       scope="col"
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 cursor-pointer"
-                      onClick={() => handleSort('title')}
+                      onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center gap-1">
-                        Title
-                        <SortIcon field="title" />
+                        Name
+                        <SortIcon field="name" />
                       </div>
                     </th>
                     <th
@@ -172,71 +141,76 @@ export const Findings: React.FC = () => {
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('source')}
+                      onClick={() => handleSort('category')}
                     >
                       <div className="flex items-center gap-1">
-                        Source
-                        <SortIcon field="source" />
+                        Category
+                        <SortIcon field="category" />
                       </div>
                     </th>
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('created_at')}
+                      onClick={() => handleSort('last_triggered')}
                     >
                       <div className="flex items-center gap-1">
-                        Created
-                        <SortIcon field="created_at" />
+                        Last Triggered
+                        <SortIcon field="last_triggered" />
                       </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Description
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
+                      <td colSpan={6} className="py-4 text-center text-sm text-gray-500">
                         Loading...
                       </td>
                     </tr>
-                  ) : findingsData?.items.length === 0 ? (
+                  ) : rulesData?.items.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
-                        No findings found
+                      <td colSpan={6} className="py-4 text-center text-sm text-gray-500">
+                        No rules found
                       </td>
                     </tr>
                   ) : (
-                    findingsData?.items.map((finding: Finding) => (
-                      <tr
-                        key={finding.id}
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedFinding(finding)}
-                      >
+                    rulesData?.items.map((rule) => (
+                      <tr key={rule.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          {finding.title}
+                          {rule.name}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span
                             className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                              severityColors[finding.severity]
+                              severityColors[rule.severity]
                             }`}
                           >
-                            {finding.severity}
+                            {rule.severity}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span
                             className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                              statusColors[finding.status]
+                              statusColors[rule.status]
                             }`}
                           >
-                            {finding.status.replace('_', ' ')}
+                            {rule.status}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {finding.source}
+                          {rule.category}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(finding.created_at).toLocaleDateString()}
+                          {new Date(rule.last_triggered).toLocaleString()}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-gray-500">
+                          {rule.description}
                         </td>
                       </tr>
                     ))
@@ -247,12 +221,6 @@ export const Findings: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Details Modal */}
-      <FindingDetailsModal
-        finding={selectedFinding}
-        onClose={() => setSelectedFinding(null)}
-      />
     </div>
   );
 };

@@ -1,131 +1,142 @@
-"""Actions endpoints."""
+"""Action management endpoints."""
 
 from typing import List, Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from opmas_mgmt_api.api.deps import get_current_user, get_db
-from opmas_mgmt_api.schemas.action import Action, ActionCreate, ActionUpdate
-from opmas_mgmt_api.schemas.auth import User
-from opmas_mgmt_api.services.action import ActionService
+from fastapi import APIRouter, Depends, HTTPException
+from opmas_mgmt_api.api.deps import get_db, get_nats
+from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.schemas.actions import ActionCreate, ActionResponse, ActionUpdate
+from opmas_mgmt_api.services.actions import ActionService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
 
-@router.get("", response_model=List[Action])
+@router.get("/", response_model=List[ActionResponse])
 async def get_actions(
-    search: Optional[str] = None,
-    priority: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
     status: Optional[str] = None,
-    sort_by: str = "due_date",
-    sort_direction: str = "asc",
+    finding_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get all actions with optional filtering and sorting."""
-    try:
-        service = ActionService(db)
-        actions = await service.get_actions(
-            search=search,
-            priority=priority,
-            status=status,
-            sort_by=sort_by,
-            sort_direction=sort_direction,
-        )
-        return actions
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve actions: {str(e)}",
-        )
+    nats: NATSManager = Depends(get_nats),
+) -> List[ActionResponse]:
+    """List actions with optional filtering.
+
+    Args:
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        status: Filter by status
+        finding_id: Filter by finding ID
+        db: Database session
+        nats: NATS manager
+
+    Returns:
+        List of actions
+    """
+    service = ActionService(db, nats)
+    return await service.list_actions(skip=skip, limit=limit, status=status, finding_id=finding_id)
 
 
-@router.post("", response_model=Action, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ActionResponse)
 async def create_action(
     action: ActionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Create a new action."""
+    nats: NATSManager = Depends(get_nats),
+) -> ActionResponse:
+    """Create a new action.
+
+    Args:
+        action: Action data
+        db: Database session
+        nats: NATS manager
+
+    Returns:
+        Created action
+
+    Raises:
+        HTTPException: If action data is invalid
+    """
+    service = ActionService(db, nats)
     try:
-        service = ActionService(db)
         return await service.create_action(action)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create action: {str(e)}",
-        )
+        raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/{action_id}", response_model=Action)
+@router.get("/{action_id}", response_model=ActionResponse)
 async def get_action(
-    action_id: str,
+    action_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get a specific action by ID."""
+    nats: NATSManager = Depends(get_nats),
+) -> ActionResponse:
+    """Get action by ID.
+
+    Args:
+        action_id: Action ID
+        db: Database session
+        nats: NATS manager
+
+    Returns:
+        Action data
+
+    Raises:
+        HTTPException: If action not found
+    """
+    service = ActionService(db, nats)
     try:
-        service = ActionService(db)
-        action = await service.get_action(action_id)
-        if not action:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Action {action_id} not found",
-            )
-        return action
-    except HTTPException:
-        raise
+        return await service.get_action(action_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve action: {str(e)}",
-        )
+        raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.put("/{action_id}", response_model=Action)
+@router.put("/{action_id}", response_model=ActionResponse)
 async def update_action(
-    action_id: str,
+    action_id: UUID,
     action: ActionUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Update an existing action."""
+    nats: NATSManager = Depends(get_nats),
+) -> ActionResponse:
+    """Update an action.
+
+    Args:
+        action_id: Action ID
+        action: Updated action data
+        db: Database session
+        nats: NATS manager
+
+    Returns:
+        Updated action
+
+    Raises:
+        HTTPException: If action not found or data is invalid
+    """
+    service = ActionService(db, nats)
     try:
-        service = ActionService(db)
-        updated_action = await service.update_action(action_id, action)
-        if not updated_action:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Action {action_id} not found",
-            )
-        return updated_action
-    except HTTPException:
-        raise
+        return await service.update_action(action_id, action)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update action: {str(e)}",
-        )
+        raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.delete("/{action_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{action_id}")
 async def delete_action(
-    action_id: str,
+    action_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete an action."""
+    nats: NATSManager = Depends(get_nats),
+) -> None:
+    """Delete an action.
+
+    Args:
+        action_id: Action ID
+        db: Database session
+        nats: NATS manager
+
+    Raises:
+        HTTPException: If action not found
+    """
+    service = ActionService(db, nats)
     try:
-        service = ActionService(db)
-        if not await service.delete_action(action_id):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Action {action_id} not found",
-            )
-    except HTTPException:
-        raise
+        await service.delete_action(action_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete action: {str(e)}",
-        )
+        raise HTTPException(status_code=404, detail=str(e))

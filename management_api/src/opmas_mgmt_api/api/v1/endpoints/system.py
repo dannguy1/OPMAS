@@ -1,23 +1,23 @@
 """System management endpoints."""
 
-from typing import Dict, Any, Optional
+import logging
 from datetime import datetime
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Body, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from opmas_mgmt_api.api.deps import get_db, get_nats
 from opmas_mgmt_api.api.v1.endpoints.route_utils import create_route_builder
-from opmas_mgmt_api.core.exceptions import ValidationError, ResourceNotFoundError
+from opmas_mgmt_api.core.exceptions import ResourceNotFoundError, ValidationError
 from opmas_mgmt_api.schemas.system import (
-    SystemHealth,
-    SystemMetrics,
-    SystemStatus,
     SystemConfig,
     SystemConfigUpdate,
     SystemControl,
+    SystemHealth,
+    SystemMetrics,
+    SystemStatus,
 )
 from opmas_mgmt_api.services.system import SystemService
 from sqlalchemy.ext.asyncio import AsyncSession
-import logging
 
 router = APIRouter()
 route = create_route_builder(router)
@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @route.get("/health", response_model=SystemHealth)
-async def get_health(
-    db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> SystemHealth:
+async def get_health(db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> SystemHealth:
     """Get system health status."""
     service = SystemService(db, nats)
     try:
@@ -37,9 +35,7 @@ async def get_health(
 
 
 @route.get("/metrics", response_model=SystemMetrics)
-async def get_metrics(
-    db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> SystemMetrics:
+async def get_metrics(db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> SystemMetrics:
     """Get system metrics."""
     service = SystemService(db, nats)
     try:
@@ -49,9 +45,7 @@ async def get_metrics(
 
 
 @route.get("/status", response_model=SystemStatus)
-async def get_status(
-    db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> SystemStatus:
+async def get_status(db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> SystemStatus:
     """Get system status."""
     service = SystemService(db, nats)
     try:
@@ -61,9 +55,7 @@ async def get_status(
 
 
 @route.get("/config", response_model=SystemConfig)
-async def get_config(
-    db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> SystemConfig:
+async def get_config(db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> SystemConfig:
     """Get system configuration."""
     service = SystemService(db, nats)
     try:

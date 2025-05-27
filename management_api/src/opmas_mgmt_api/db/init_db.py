@@ -2,13 +2,13 @@
 
 import logging
 from datetime import datetime
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from opmas_mgmt_api.core.security import get_password_hash
 from opmas_mgmt_api.db.base import Base
 from opmas_mgmt_api.db.session import async_engine, async_session
 from opmas_mgmt_api.models.user import User
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +42,11 @@ async def create_initial_admin(session: AsyncSession) -> None:
 async def init_db() -> None:
     """Initialize the database."""
     try:
-        # Create tables
+        # Drop and recreate tables
         async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully")
+        logger.info("Database tables recreated successfully")
 
         # Create initial admin user
         async with async_session() as session:

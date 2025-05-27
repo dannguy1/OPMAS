@@ -1,18 +1,17 @@
 """Main FastAPI application."""
 
 import logging
+import os
 import time
+from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
 from jose import JWTError, jwt
-import os
-from dotenv import load_dotenv
 from opmas_mgmt_api.api.v1.endpoints import (
     actions,
     agents,
@@ -20,13 +19,14 @@ from opmas_mgmt_api.api.v1.endpoints import (
     dashboard,
     devices,
     findings,
-    rules,
     playbooks,
+    rules,
     system,
 )
 from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.db.init_db import init_db
+from sqlalchemy.orm import Session
 
 # Configure logging
 logging.basicConfig(
@@ -156,5 +156,5 @@ async def root():
         "message": "Welcome to OPMAS Management API",
         "docs": "/docs",
         "redoc": "/redoc",
-        "api": settings.API_V1_STR
+        "api": settings.API_V1_STR,
     }

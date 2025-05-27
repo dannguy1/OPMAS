@@ -25,16 +25,46 @@ class RuleService:
         self,
         skip: int = 0,
         limit: int = 100,
+        search: Optional[str] = None,
+        sort_by: str = "name",
+        sort_direction: str = "asc",
         agent_type: Optional[str] = None,
         enabled: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """List rules with optional filtering."""
         query = select(Rule)
 
+        # Apply search filter
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                (Rule.name.ilike(search_term)) | (Rule.description.ilike(search_term))
+            )
+
+        # Apply other filters
         if agent_type:
             query = query.where(Rule.agent_type == agent_type)
         if enabled is not None:
             query = query.where(Rule.enabled == enabled)
+
+        # Apply sorting
+        valid_sort_fields = {
+            "name": Rule.name,
+            "description": Rule.description,
+            "agent_type": Rule.agent_type,
+            "priority": Rule.priority,
+            "enabled": Rule.enabled,
+            "created_at": Rule.created_at,
+            "updated_at": Rule.updated_at,
+            "last_triggered": Rule.last_triggered,
+            "trigger_count": Rule.trigger_count,
+        }
+
+        sort_column = valid_sort_fields.get(sort_by, Rule.name)
+        if sort_direction.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
 
         # Get total count
         count_query = select(Rule.id).select_from(query.subquery())

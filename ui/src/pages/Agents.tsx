@@ -6,63 +6,42 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
-import { FindingDetailsModal } from '../components/findings/FindingDetailsModal';
 
-interface Finding {
+interface Agent {
   id: string;
-  title: string;
+  name: string;
+  type: string;
+  status: 'running' | 'stopped' | 'error';
   description: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
   created_at: string;
   updated_at: string;
-  device_id: string;
-  source: string;
+  last_heartbeat: string;
 }
 
-interface FindingsResponse {
-  items: Finding[];
+interface AgentsResponse {
+  items: Agent[];
   total: number;
   skip: number;
   limit: number;
 }
 
-const severityColors = {
-  critical: 'bg-red-100 text-red-800',
-  high: 'bg-orange-100 text-orange-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  low: 'bg-green-100 text-green-800',
-};
-
-const statusColors = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-purple-100 text-purple-800',
-  resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-100 text-gray-800',
-};
-
-export const Findings: React.FC = () => {
+export const Agents: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [sortField, setSortField] = useState<keyof Finding>('created_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
+  const [sortField, setSortField] = useState<keyof Agent>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const { data: findingsData, isLoading } = useQuery<FindingsResponse>({
-    queryKey: ['findings', searchTerm, selectedSeverity, selectedStatus, sortField, sortDirection],
-    queryFn: () => api.get('/findings', {
+  const { data: agentsData, isLoading } = useQuery<AgentsResponse>({
+    queryKey: ['agents', searchTerm, sortField, sortDirection],
+    queryFn: () => api.get('/agents', {
       params: {
-        search: searchTerm || undefined,
-        severity: selectedSeverity || undefined,
-        status: selectedStatus || undefined,
+        search: searchTerm,
         sort_by: sortField,
-        sort_direction: sortDirection
+        sort_direction: sortDirection,
       }
     }).then(res => res.data)
   });
 
-  const handleSort = (field: keyof Finding) => {
+  const handleSort = (field: keyof Agent) => {
     if (field === sortField) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -71,7 +50,7 @@ export const Findings: React.FC = () => {
     }
   };
 
-  const SortIcon = ({ field }: { field: keyof Finding }) => {
+  const SortIcon: React.FC<{ field: keyof Agent }> = ({ field }) => {
     if (field !== sortField) return null;
     return sortDirection === 'asc' ? (
       <ArrowUpIcon className="h-4 w-4" />
@@ -80,12 +59,18 @@ export const Findings: React.FC = () => {
     );
   };
 
+  const statusColors = {
+    running: 'bg-green-100 text-green-800',
+    stopped: 'bg-red-100 text-red-800',
+    error: 'bg-yellow-100 text-yellow-800',
+  };
+
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-900">Findings</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">Agents</h2>
         <p className="mt-1 text-sm text-gray-500">
-          View and manage security findings
+          View and manage security agents
         </p>
       </div>
 
@@ -99,34 +84,10 @@ export const Findings: React.FC = () => {
             <input
               type="text"
               className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              placeholder="Search findings..."
+              placeholder="Search agents..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              className="rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={selectedSeverity}
-              onChange={(e) => setSelectedSeverity(e.target.value)}
-            >
-              <option value="">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-            <select
-              className="rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
           </div>
         </div>
       </div>
@@ -142,21 +103,21 @@ export const Findings: React.FC = () => {
                     <th
                       scope="col"
                       className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 cursor-pointer"
-                      onClick={() => handleSort('title')}
+                      onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center gap-1">
-                        Title
-                        <SortIcon field="title" />
+                        Name
+                        <SortIcon field="name" />
                       </div>
                     </th>
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('severity')}
+                      onClick={() => handleSort('type')}
                     >
                       <div className="flex items-center gap-1">
-                        Severity
-                        <SortIcon field="severity" />
+                        Type
+                        <SortIcon field="type" />
                       </div>
                     </th>
                     <th
@@ -172,22 +133,18 @@ export const Findings: React.FC = () => {
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('source')}
+                      onClick={() => handleSort('last_heartbeat')}
                     >
                       <div className="flex items-center gap-1">
-                        Source
-                        <SortIcon field="source" />
+                        Last Heartbeat
+                        <SortIcon field="last_heartbeat" />
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('created_at')}
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                     >
-                      <div className="flex items-center gap-1">
-                        Created
-                        <SortIcon field="created_at" />
-                      </div>
+                      Description
                     </th>
                   </tr>
                 </thead>
@@ -198,45 +155,35 @@ export const Findings: React.FC = () => {
                         Loading...
                       </td>
                     </tr>
-                  ) : findingsData?.items.length === 0 ? (
+                  ) : agentsData?.items.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
-                        No findings found
+                        No agents found
                       </td>
                     </tr>
                   ) : (
-                    findingsData?.items.map((finding: Finding) => (
-                      <tr
-                        key={finding.id}
-                        className="hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedFinding(finding)}
-                      >
+                    agentsData?.items.map((agent) => (
+                      <tr key={agent.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          {finding.title}
+                          {agent.name}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {agent.type}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span
                             className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                              severityColors[finding.severity]
+                              statusColors[agent.status]
                             }`}
                           >
-                            {finding.severity}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                              statusColors[finding.status]
-                            }`}
-                          >
-                            {finding.status.replace('_', ' ')}
+                            {agent.status}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {finding.source}
+                          {new Date(agent.last_heartbeat).toLocaleString()}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(finding.created_at).toLocaleDateString()}
+                        <td className="px-3 py-4 text-sm text-gray-500">
+                          {agent.description}
                         </td>
                       </tr>
                     ))
@@ -247,12 +194,6 @@ export const Findings: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Details Modal */}
-      <FindingDetailsModal
-        finding={selectedFinding}
-        onClose={() => setSelectedFinding(null)}
-      />
     </div>
   );
 };

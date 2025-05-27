@@ -12,12 +12,17 @@ export const MainLayout: React.FC = () => {
     { name: 'Dashboard', href: '/' },
     { name: 'Findings', href: '/findings' },
     { name: 'Actions', href: '/actions' },
+    { name: 'Devices', href: '/devices' },
+    { name: 'Agents', href: '/agents' },
+    { name: 'Playbooks', href: '/playbooks' },
+    { name: 'Rules', href: '/rules' },
+    { name: 'System', href: '/system' },
   ];
 
   return (
     <div className="min-h-screen bg-gray-100">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       {/* Static sidebar for desktop */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
@@ -41,7 +46,7 @@ export const MainLayout: React.FC = () => {
           </nav>
         </div>
       </div>
-      
+
       <div className="lg:pl-64">
         <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white shadow">
           <button

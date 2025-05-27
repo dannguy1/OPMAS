@@ -47,7 +47,7 @@ const PlaybooksPage: React.FC = () => {
     setError(null);
     try {
       const response = await apiClient.get<PlaybooksApiResponse>(
-          '/playbooks',
+          '/api/v1/playbooks',
           { params: { limit: 50, offset: 0 } } // Fetch initial page
       );
       setPlaybooks(response.data.playbooks || []);
@@ -84,7 +84,7 @@ const PlaybooksPage: React.FC = () => {
     // setLoading(true); // Optional: Indicate loading on the page, though modal has its own indicator
     setError(null);
     try {
-      const response = await apiClient.post<Playbook>('/playbooks', newPlaybookData);
+      const response = await apiClient.post<Playbook>('/api/v1/playbooks', newPlaybookData);
       const createdPlaybook = response.data;
       setPlaybooks(currentPlaybooks => [createdPlaybook, ...currentPlaybooks]);
       toast.success(`Playbook '${createdPlaybook.name}' added successfully.`);
@@ -103,7 +103,7 @@ const PlaybooksPage: React.FC = () => {
   const handleEditSubmit = async (playbookId: string, updatedPlaybookData: { name: string; finding_type: string; description?: string }) => {
     setError(null);
     try {
-      const response = await apiClient.put<Playbook>(`/playbooks/${Number(playbookId)}`, updatedPlaybookData);
+      const response = await apiClient.put<Playbook>(`/api/v1/playbooks/${Number(playbookId)}`, updatedPlaybookData);
       const updatedPlaybook = response.data;
       setPlaybooks(currentPlaybooks =>
           currentPlaybooks.map(pb =>
@@ -125,7 +125,7 @@ const PlaybooksPage: React.FC = () => {
      if (window.confirm(`Are you sure you want to delete playbook ${playbookId}? This cannot be undone.`)) {
          try {
             setError(null); // Clear previous errors
-            await apiClient.delete(`/playbooks/${playbookId}`);
+            await apiClient.delete(`/api/v1/playbooks/${playbookId}`);
             console.info(`Successfully deleted playbook ${playbookId}`);
             setPlaybooks(currentPlaybooks =>
                 currentPlaybooks.filter(pb => pb.playbook_id !== playbookId)

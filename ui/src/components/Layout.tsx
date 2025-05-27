@@ -17,6 +17,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', path: '/' },
     { name: 'Findings', path: '/findings' },
     { name: 'Actions', path: '/actions' },
+    { name: 'Devices', path: '/devices' },
+    { name: 'Agents', path: '/agents' },
+    { name: 'Playbooks', path: '/playbooks' },
+    { name: 'Rules', path: '/rules' },
+    { name: 'System', path: '/system' },
   ];
 
   return (

@@ -12,6 +12,11 @@ const navigation = [
   { name: 'Dashboard', href: '/' },
   { name: 'Findings', href: '/findings' },
   { name: 'Actions', href: '/actions' },
+  { name: 'Devices', href: '/devices' },
+  { name: 'Agents', href: '/agents' },
+  { name: 'Playbooks', href: '/playbooks' },
+  { name: 'Rules', href: '/rules' },
+  { name: 'System', href: '/system' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
