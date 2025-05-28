@@ -25,6 +25,8 @@ This specification outlines the design and implementation of the Agent Managemen
     - [Configuration Hierarchy](#configuration-hierarchy)
   - [6. Agent Lifecycle Management](#6-agent-lifecycle-management)
     - [Lifecycle States](#lifecycle-states)
+    - [Status Tracking](#status-tracking)
+    - [Process Management](#process-management)
     - [State Transitions](#state-transitions)
   - [7. Monitoring and Health Checks](#7-monitoring-and-health-checks)
     - [Monitoring Components](#monitoring-components)
@@ -348,74 +350,293 @@ graph TD
 
 ## 6. Agent Lifecycle Management
 
-Agent lifecycle states and transitions:
-
+### 6.1 Lifecycle States
 ```mermaid
 stateDiagram-v2
     [*] --> Discovered
     Discovered --> Registered
-    Registered --> Running
-    Running --> Stopped
-    Stopped --> Running
+    Registered --> Starting
+    Starting --> Running
+    Running --> Stopping
+    Stopping --> Stopped
+    Stopped --> Starting
     Running --> Failed
-    Failed --> Running
+    Failed --> Starting
+    Running --> Degraded
+    Degraded --> Running
+    Degraded --> Failed
     Running --> [*]
 ```
 
-### Lifecycle States
+### 6.2 Status Tracking
+1. **Process Status**
+   ```python
+   class ProcessStatus:
+       RUNNING = "running"
+       STARTING = "starting"
+       STOPPING = "stopping"
+       STOPPED = "stopped"
+       FAILED = "failed"
+       DEGRADED = "degraded"
+   ```
 
-1. **Discovered**
-   - Package detected
-   - Metadata extracted
-   - Ready for registration
+2. **Health Status**
+   ```python
+   class HealthStatus:
+       HEALTHY = "healthy"
+       WARNING = "warning"
+       CRITICAL = "critical"
+       UNKNOWN = "unknown"
+   ```
 
-2. **Registered**
-   - ID assigned
-   - Credentials created
-   - Configuration initialized
+3. **Recovery Status**
+   ```python
+   class RecoveryStatus:
+       NONE = "none"
+       IN_PROGRESS = "in_progress"
+       SUCCESS = "success"
+       FAILED = "failed"
+   ```
 
-3. **Running**
-   - Process started
-   - NATS connected
-   - Heartbeat active
-   - Processing events
+### 6.3 Status Monitoring
+1. **Process Monitoring**
+   - PID tracking
+   - Resource usage (CPU, memory, disk, network)
+   - Process state transitions
+   - Exit code monitoring
+   - Signal handling
 
-4. **Stopped**
-   - Graceful shutdown
-   - Resources released
-   - State preserved
+2. **Health Monitoring**
+   - Heartbeat tracking
+   - Response time monitoring
+   - Error rate tracking
+   - Resource threshold monitoring
+   - Dependency health checks
 
-5. **Failed**
-   - Error detected
-   - Automatic restart
-   - Error reporting
+3. **Recovery Monitoring**
+   - Recovery attempt tracking
+   - Recovery success/failure rate
+   - Recovery time metrics
+   - Last recovery timestamp
+   - Recovery strategy effectiveness
 
-### State Transitions
+### 6.4 Recovery Mechanisms
+1. **Automatic Recovery**
+   ```python
+   class RecoveryStrategy:
+       def __init__(self):
+           self.max_attempts = 3
+           self.backoff_factor = 2
+           self.max_backoff = 300  # seconds
+           self.recovery_timeout = 60  # seconds
+   ```
 
-1. **Discovered to Registered**
-   - Agent package detected
-   - Metadata extracted
-   - Registration process initiated
+2. **Recovery Actions**
+   - Process restart
+   - Configuration reload
+   - Resource reallocation
+   - State restoration
+   - Dependency reconnection
 
-2. **Registered to Running**
-   - Agent registration completed
-   - Configuration initialized
-   - Process started
+3. **Recovery Triggers**
+   - Process termination
+   - Health check failure
+   - Resource exhaustion
+   - Dependency failure
+   - Manual intervention
 
-3. **Running to Stopped**
-   - Process stopped
-   - Resources released
-   - State preserved
+4. **Recovery Policies**
+   ```python
+   class RecoveryPolicy:
+       def __init__(self):
+           self.auto_recovery = True
+           self.max_retries = 3
+           self.retry_delay = 5  # seconds
+           self.escalation_threshold = 3
+           self.notification_channels = ["email", "slack"]
+   ```
 
-4. **Stopped to Running**
-   - Process restarted
-   - Resources reallocated
-   - State restored
+### 6.5 Status Reporting
+1. **Status Events**
+   ```python
+   class StatusEvent:
+       def __init__(self):
+           self.timestamp = datetime.utcnow()
+           self.agent_id = str
+           self.status = ProcessStatus
+           self.health = HealthStatus
+           self.recovery = RecoveryStatus
+           self.metrics = Dict
+           self.error = Optional[str]
+   ```
 
-5. **Running to Failed**
-   - Error detected
-   - Process terminated
-   - State marked as failed
+2. **Status History**
+   - Event-based tracking
+   - Time-series storage
+   - Status transitions
+   - Recovery attempts
+   - Error history
+
+3. **Status Aggregation**
+   - System-wide status
+   - Agent group status
+   - Dependency status
+   - Resource status
+   - Recovery status
+
+### 6.6 Database Schema
+```sql
+-- Agent status tracking
+CREATE TABLE agent_status (
+    id SERIAL PRIMARY KEY,
+    agent_id VARCHAR(36) NOT NULL,
+    process_status VARCHAR(20) NOT NULL,
+    health_status VARCHAR(20) NOT NULL,
+    recovery_status VARCHAR(20) NOT NULL,
+    pid INTEGER,
+    start_time TIMESTAMP,
+    last_heartbeat TIMESTAMP,
+    last_error TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- Status history
+CREATE TABLE agent_status_history (
+    id SERIAL PRIMARY KEY,
+    agent_id VARCHAR(36) NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    from_status VARCHAR(20),
+    to_status VARCHAR(20),
+    details JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- Recovery attempts
+CREATE TABLE agent_recovery_attempts (
+    id SERIAL PRIMARY KEY,
+    agent_id VARCHAR(36) NOT NULL,
+    attempt_number INTEGER NOT NULL,
+    recovery_strategy VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    error TEXT,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+
+-- Resource metrics
+CREATE TABLE agent_resource_metrics (
+    id SERIAL PRIMARY KEY,
+    agent_id VARCHAR(36) NOT NULL,
+    metric_type VARCHAR(50) NOT NULL,
+    metric_value FLOAT NOT NULL,
+    threshold_value FLOAT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agent_id) REFERENCES agents(id)
+);
+```
+
+### 6.7 API Endpoints
+```python
+# Status endpoints
+@router.get("/agents/{agent_id}/status")
+async def get_agent_status(agent_id: str):
+    """Get current agent status."""
+    return await agent_service.get_agent_status(agent_id)
+
+@router.get("/agents/{agent_id}/status/history")
+async def get_agent_status_history(agent_id: str):
+    """Get agent status history."""
+    return await agent_service.get_agent_status_history(agent_id)
+
+@router.get("/agents/{agent_id}/recovery")
+async def get_agent_recovery_status(agent_id: str):
+    """Get agent recovery status."""
+    return await agent_service.get_agent_recovery_status(agent_id)
+
+@router.post("/agents/{agent_id}/recovery")
+async def trigger_agent_recovery(agent_id: str):
+    """Trigger agent recovery."""
+    return await agent_service.trigger_agent_recovery(agent_id)
+
+@router.get("/agents/{agent_id}/metrics")
+async def get_agent_metrics(agent_id: str):
+    """Get agent metrics."""
+    return await agent_service.get_agent_metrics(agent_id)
+```
+
+### 6.8 UI Components
+1. **Status Dashboard**
+   ```typescript
+   interface StatusDashboard {
+       agentStatus: {
+           processStatus: string;
+           healthStatus: string;
+           recoveryStatus: string;
+           lastHeartbeat: string;
+           lastError?: string;
+       };
+       metrics: {
+           cpu: number;
+           memory: number;
+           disk: number;
+           network: number;
+       };
+       history: StatusEvent[];
+       recoveryAttempts: RecoveryAttempt[];
+   }
+   ```
+
+2. **Status Timeline**
+   ```typescript
+   interface StatusTimeline {
+       events: {
+           timestamp: string;
+           type: string;
+           fromStatus: string;
+           toStatus: string;
+           details: any;
+       }[];
+   }
+   ```
+
+3. **Recovery Controls**
+   ```typescript
+   interface RecoveryControls {
+       canRecover: boolean;
+       recoveryInProgress: boolean;
+       lastRecoveryAttempt?: {
+           timestamp: string;
+           status: string;
+           error?: string;
+       };
+       recoveryPolicy: {
+           autoRecovery: boolean;
+           maxRetries: number;
+           retryDelay: number;
+       };
+   }
+   ```
+
+4. **Metrics Visualization**
+   ```typescript
+   interface MetricsVisualization {
+       resourceUsage: {
+           cpu: TimeSeriesData[];
+           memory: TimeSeriesData[];
+           disk: TimeSeriesData[];
+           network: TimeSeriesData[];
+       };
+       healthMetrics: {
+           responseTime: TimeSeriesData[];
+           errorRate: TimeSeriesData[];
+           heartbeatLatency: TimeSeriesData[];
+       };
+   }
+   ```
 
 ## 7. Monitoring and Health Checks
 
@@ -935,13 +1156,4 @@ graph TD
    ```
 
 3. **Monitor**
-   ```bash
-   # Health check
-   curl -f http://api.opmas/health || exit 1
-   ```
-
-4. **Rollback**
-   ```bash
-   # Rollback process
-   docker stack deploy -c docker-compose.prod.yml.rollback opmas
    ```

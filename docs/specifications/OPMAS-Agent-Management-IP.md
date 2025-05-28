@@ -320,3 +320,404 @@ backend/src/opmas/agents/[agent_name]/
      memory: "512MB"
      disk: "1GB"
    ```
+
+## 16. Asyncio-based Implementation
+
+### 16.1 Agent Controller Implementation
+
+1. **AgentController Class**
+   ```python
+   from typing import Dict, List, Optional
+   import asyncio
+   import psutil
+   from datetime import datetime
+   from pathlib import Path
+   import logging
+   import json
+
+   class AgentController:
+       def __init__(self, db: AsyncSession, nats: NATSManager):
+           self.db = db
+           self.nats = nats
+           self.agent_processes: Dict[str, AgentProcess] = {}
+           self.logger = logging.getLogger(__name__)
+
+       async def discover_agent_packages(self) -> List[AgentPackage]:
+           """Scan filesystem for agent packages."""
+           discovered = []
+           agents_dir = Path("backend/src/opmas/agents")
+
+           for package_dir in agents_dir.iterdir():
+               if not self._is_valid_agent_package(package_dir):
+                   continue
+
+               metadata = self._read_agent_metadata(package_dir)
+               if metadata:
+                   discovered.append(AgentPackage(
+                       name=metadata["AGENT_NAME"],
+                       type=metadata["AGENT_TYPE"],
+                       version=metadata["AGENT_VERSION"],
+                       path=package_dir,
+                       metadata=metadata
+                   ))
+           return discovered
+
+       async def register_agent(self, package: AgentPackage) -> Agent:
+           """Register a new agent in the system."""
+           agent_id = f"{package.type}-{uuid4()}"
+
+           agent = Agent(
+               id=agent_id,
+               name=package.name,
+               type=package.type,
+               version=package.version,
+               status="registered",
+               config=package.metadata,
+               created_at=datetime.utcnow()
+           )
+
+           self.db.add(agent)
+           await self.db.commit()
+
+           return agent
+
+       async def start_agent(self, agent: Agent) -> None:
+           """Start a registered agent as an asyncio process."""
+           try:
+               # Create agent process
+               process = await asyncio.create_subprocess_exec(
+                   sys.executable,
+                   f"backend/scripts/run_{agent.type}_agent.py",
+                   env={
+                       "AGENT_ID": agent.id,
+                       "MANAGEMENT_API_URL": os.getenv("MANAGEMENT_API_URL"),
+                       "NATS_URL": os.getenv("NATS_URL")
+                   },
+                   stdout=asyncio.subprocess.PIPE,
+                   stderr=asyncio.subprocess.PIPE
+               )
+
+               # Create agent process wrapper
+               agent_process = AgentProcess(agent.id, agent.config)
+               agent_process.process = process
+               agent_process.pid = process.pid
+               agent_process.status = "starting"
+
+               # Store process
+               self.agent_processes[agent.id] = agent_process
+
+               # Start monitoring task
+               monitor_task = asyncio.create_task(
+                   self._monitor_agent(agent, agent_process)
+               )
+               agent_process.monitor_task = monitor_task
+
+               agent.status = "starting"
+               await self.db.commit()
+
+               self.logger.info(f"Started agent {agent.id} with PID {process.pid}")
+
+           except Exception as e:
+               self.logger.error(f"Failed to start agent {agent.id}: {e}")
+               agent.status = "error"
+               await self.db.commit()
+               raise
+
+       async def stop_agent(self, agent: Agent) -> None:
+           """Stop a running agent process."""
+           if agent.id not in self.agent_processes:
+               return
+
+           try:
+               agent_process = self.agent_processes[agent.id]
+               agent_process.status = "stopping"
+               agent.status = "stopping"
+               await self.db.commit()
+
+               # Send SIGTERM
+               agent_process.process.terminate()
+
+               # Wait for graceful shutdown
+               try:
+                   await asyncio.wait_for(agent_process.process.wait(), timeout=10)
+               except asyncio.TimeoutError:
+                   # Force kill if graceful shutdown fails
+                   agent_process.process.kill()
+                   await agent_process.process.wait()
+
+               # Cancel monitoring task
+               if agent_process.monitor_task:
+                   agent_process.monitor_task.cancel()
+                   try:
+                       await agent_process.monitor_task
+                   except asyncio.CancelledError:
+                       pass
+
+               del self.agent_processes[agent.id]
+
+               agent.status = "stopped"
+               await self.db.commit()
+
+               self.logger.info(f"Stopped agent {agent.id}")
+
+           except Exception as e:
+               self.logger.error(f"Failed to stop agent {agent.id}: {e}")
+               raise
+
+       async def _monitor_agent(self, agent: Agent, agent_process: AgentProcess):
+           """Monitor agent process health."""
+           try:
+               while True:
+                   # Check if process is still running
+                   if agent_process.process.returncode is not None:
+                       self.logger.error(
+                           f"Agent {agent.id} process exited with code {agent_process.process.returncode}"
+                       )
+                       agent.status = "error"
+                       await self.db.commit()
+                       break
+
+                   # Read output
+                   stdout = await agent_process.process.stdout.read(1024)
+                   if stdout:
+                       self.logger.info(f"Agent {agent.id} stdout: {stdout.decode()}")
+
+                   stderr = await agent_process.process.stderr.read(1024)
+                   if stderr:
+                       self.logger.error(f"Agent {agent.id} stderr: {stderr.decode()}")
+
+                   # Update status if starting
+                   if agent_process.status == "starting":
+                       agent_process.status = "running"
+                       agent.status = "running"
+                       await self.db.commit()
+
+                   await asyncio.sleep(1)
+
+           except asyncio.CancelledError:
+               self.logger.info(f"Monitoring task for agent {agent.id} cancelled")
+           except Exception as e:
+               self.logger.error(f"Error monitoring agent {agent.id}: {e}")
+               agent.status = "error"
+               await self.db.commit()
+
+       async def get_agent_status(self, agent: Agent) -> Dict[str, Any]:
+           """Get agent process status."""
+           if agent.id not in self.agent_processes:
+               return {"status": "stopped"}
+
+           try:
+               agent_process = self.agent_processes[agent.id]
+
+               # Get process info
+               try:
+                   p = psutil.Process(agent_process.pid)
+                   return {
+                       "status": agent_process.status,
+                       "pid": agent_process.pid,
+                       "cpu_percent": p.cpu_percent(),
+                       "memory_percent": p.memory_percent(),
+                       "create_time": p.create_time(),
+                       "num_threads": p.num_threads()
+                   }
+               except (psutil.NoSuchProcess, psutil.AccessDenied):
+                   return {"status": "error", "error": "Process not found"}
+
+           except Exception as e:
+               self.logger.error(f"Failed to get status for agent {agent.id}: {e}")
+               return {"status": "error", "error": str(e)}
+   ```
+
+2. **Agent Process Class**
+   ```python
+   class AgentProcess:
+       def __init__(self, agent_id: str, config: Dict):
+           self.agent_id = agent_id
+           self.config = config
+           self.process: Optional[asyncio.subprocess.Process] = None
+           self.monitor_task: Optional[asyncio.Task] = None
+           self.status = "stopped"
+           self.pid: Optional[int] = None
+   ```
+
+### 16.2 Agent Script Implementation
+
+1. **Agent Runner Script**
+   ```python
+   # backend/scripts/run_agent.py
+   import asyncio
+   import os
+   import sys
+   import signal
+   from typing import Optional
+   import logging
+   from opmas.agents.base_agent import BaseAgent
+
+   class AgentRunner:
+       def __init__(self, agent_id: str):
+           self.agent_id = agent_id
+           self.agent: Optional[BaseAgent] = None
+           self.logger = logging.getLogger(__name__)
+           self.running = True
+
+       def handle_shutdown(self, signum, frame):
+           """Handle shutdown signals."""
+           self.logger.info("Received shutdown signal")
+           self.running = False
+
+       async def run(self):
+           """Run the agent."""
+           try:
+               # Set up signal handlers
+               signal.signal(signal.SIGTERM, self.handle_shutdown)
+               signal.signal(signal.SIGINT, self.handle_shutdown)
+
+               # Create and start agent
+               self.agent = BaseAgent(
+                   agent_id=self.agent_id,
+                   management_api_url=os.getenv("MANAGEMENT_API_URL"),
+                   nats_url=os.getenv("NATS_URL")
+               )
+
+               await self.agent.start()
+
+               # Main loop
+               while self.running:
+                   await asyncio.sleep(1)
+
+               # Graceful shutdown
+               if self.agent:
+                   await self.agent.stop()
+
+           except Exception as e:
+               self.logger.error(f"Agent error: {e}")
+               sys.exit(1)
+
+   if __name__ == "__main__":
+       if len(sys.argv) != 2:
+           print("Usage: run_agent.py <agent_id>")
+           sys.exit(1)
+
+       agent_id = sys.argv[1]
+       runner = AgentRunner(agent_id)
+
+       try:
+           asyncio.run(runner.run())
+       except KeyboardInterrupt:
+           pass
+   ```
+
+### 16.3 Agent Base Class Updates
+
+1. **BaseAgent Class**
+   ```python
+   class BaseAgent:
+       def __init__(self, agent_id: str, management_api_url: str, nats_url: str):
+           self.agent_id = agent_id
+           self.management_api_url = management_api_url
+           self.nats_url = nats_url
+           self.nats_client = None
+           self.running = False
+           self.logger = logging.getLogger(self.__class__.__name__)
+
+       async def start(self):
+           """Initialize and start the agent."""
+           try:
+               # Connect to NATS
+               self.nats_client = await nats.connect(self.nats_url)
+
+               # Subscribe to control topic
+               await self.nats_client.subscribe(
+                   f"agent.{self.agent_id}.control",
+                   cb=self._handle_control_message
+               )
+
+               # Start heartbeat
+               self.running = True
+               asyncio.create_task(self._heartbeat())
+
+               self.logger.info(f"Agent {self.agent_id} started")
+
+           except Exception as e:
+               self.logger.error(f"Failed to start agent: {e}")
+               raise
+
+       async def stop(self):
+           """Stop the agent."""
+           self.running = False
+           if self.nats_client:
+               await self.nats_client.close()
+           self.logger.info(f"Agent {self.agent_id} stopped")
+
+       async def _heartbeat(self):
+           """Send periodic heartbeat."""
+           while self.running:
+               try:
+                   await self.nats_client.publish(
+                       "agent.heartbeat",
+                       json.dumps({
+                           "agent_id": self.agent_id,
+                           "timestamp": datetime.utcnow().isoformat()
+                       }).encode()
+                   )
+               except Exception as e:
+                   self.logger.error(f"Heartbeat error: {e}")
+               await asyncio.sleep(30)
+
+       async def _handle_control_message(self, msg):
+           """Handle control messages."""
+           try:
+               data = json.loads(msg.data.decode())
+               command = data.get("command")
+
+               if command == "stop":
+                   await self.stop()
+               elif command == "reload":
+                   await self.reload_config()
+
+           except Exception as e:
+               self.logger.error(f"Error handling control message: {e}")
+   ```
+
+### 16.4 Required Changes to Agent Implementation
+
+1. **Agent Package Structure**
+   ```
+   backend/src/opmas/agents/[agent_name]/
+   ├── __init__.py
+   ├── agent.py              # Main agent implementation
+   ├── .env.discovery        # Discovery metadata
+   ├── requirements.txt      # Package dependencies
+   ├── README.md            # Documentation
+   └── tests/               # Test directory
+   ```
+
+2. **Agent Implementation Requirements**
+   - Must inherit from `BaseAgent`
+   - Must implement `start()` and `stop()`
+   - Must handle control messages
+   - Must send heartbeats
+   - Must implement graceful shutdown
+
+3. **Environment Variables**
+   ```bash
+   # Required
+   AGENT_ID=security-123
+   MANAGEMENT_API_URL=http://api.opmas
+   NATS_URL=nats://nats:4222
+
+   # Optional
+   LOG_LEVEL=INFO
+   METRICS_ENABLED=true
+   ```
+
+4. **Agent Discovery File**
+   ```ini
+   # .env.discovery
+   AGENT_NAME=SecurityAgent
+   AGENT_VERSION=1.0.0
+   AGENT_TYPE=security
+   AGENT_DESCRIPTION=Security monitoring agent
+   DEFAULT_SUBSCRIBED_TOPICS=logs.security,logs.auth
+   DEFAULT_FINDINGS_TOPIC=findings.security
+   ```
