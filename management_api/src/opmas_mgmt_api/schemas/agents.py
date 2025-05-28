@@ -25,19 +25,21 @@ class AgentBase(BaseModel):
     )
 
     @validator("agent_type")
-    def validate_agent_type(cls, v):
+    def validate_agent_type(cls, v: str) -> str:
         """Validate agent type."""
         valid_types = ["custom", "system", "network", "security"]
         if v not in valid_types:
-            raise ValueError(f"Invalid agent type. Must be one of: {', '.join(valid_types)}")
+            msg = f"Invalid agent type. Must be one of: {', '.join(valid_types)}"
+            raise ValueError(msg)
         return v
 
     @validator("status")
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         """Validate agent status."""
         valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
         if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            raise ValueError(msg)
         return v
 
 
@@ -61,23 +63,25 @@ class AgentUpdate(BaseModel):
     config: Optional[Dict[str, Any]] = Field(None, description="Agent configuration")
 
     @validator("agent_type")
-    def validate_agent_type(cls, v):
+    def validate_agent_type(cls, v: Optional[str]) -> Optional[str]:
         """Validate agent type."""
         if v is None:
             return v
         valid_types = ["custom", "system", "network", "security"]
         if v not in valid_types:
-            raise ValueError(f"Invalid agent type. Must be one of: {', '.join(valid_types)}")
+            msg = f"Invalid agent type. Must be one of: {', '.join(valid_types)}"
+            raise ValueError(msg)
         return v
 
     @validator("status")
-    def validate_status(cls, v):
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
         """Validate agent status."""
         if v is None:
             return v
         valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
         if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            raise ValueError(msg)
         return v
 
 
@@ -89,22 +93,23 @@ class AgentResponse(AgentBase):
     updated_at: datetime = Field(..., description="Last update timestamp")
     last_seen: Optional[datetime] = Field(None, description="Last time the agent was seen")
     device_id: Optional[UUID] = Field(None, description="Associated device ID")
-    agent_type: Optional[str] = Field(default="unknown", description="Type of agent")
-    status: Optional[str] = Field(default="unknown", description="Agent status")
-    agent_metadata: Optional[Dict[str, Any]] = Field(
+    agent_type: str = Field(default="unknown", description="Type of agent")
+    status: str = Field(default="unknown", description="Agent status")
+    agent_metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional agent metadata"
     )
-    hostname: Optional[str] = Field(default=None, description="Agent hostname")
-    ip_address: Optional[IPvAnyAddress] = Field(default=None, description="Agent IP address")
-    port: Optional[int] = Field(default=None, ge=1, le=65535, description="Agent port")
-    confidence: Optional[float] = Field(default=None, description="Confidence score of discovery")
+    hostname: str = Field(default="", description="Agent hostname")
+    ip_address: IPvAnyAddress = Field(..., description="Agent IP address")
+    port: int = Field(..., ge=1, le=65535, description="Agent port")
+    confidence: Optional[float] = Field(None, description="Confidence score of discovery")
 
     @validator("status")
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         """Validate agent status."""
         valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
         if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            raise ValueError(msg)
         return v
 
     class Config:
@@ -122,11 +127,12 @@ class AgentStatus(BaseModel):
     metrics: Dict[str, Any] = Field(default_factory=dict, description="Agent metrics")
 
     @validator("status")
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         """Validate agent status."""
         valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
         if v not in valid_statuses:
-            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+            msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+            raise ValueError(msg)
         return v
 
 
@@ -153,3 +159,18 @@ class AgentConfig(BaseModel):
     agent_metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Additional configuration metadata"
     )
+
+
+class AgentList(BaseModel):
+    """List of agents response schema."""
+
+    agents: List[AgentResponse] = Field(..., description="List of agents")
+    total: int = Field(..., description="Total number of agents")
+    page: int = Field(..., description="Current page number")
+    size: int = Field(..., description="Page size")
+    pages: int = Field(..., description="Total number of pages")
+
+    class Config:
+        """Pydantic config."""
+
+        from_attributes = True
