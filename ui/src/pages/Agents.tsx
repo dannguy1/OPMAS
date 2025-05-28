@@ -29,6 +29,7 @@ export const Agents: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Agent>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [discovering, setDiscovering] = useState(false);
 
   const { data: agentsData, isLoading } = useQuery<AgentsResponse>({
     queryKey: ['agents', searchTerm, sortField, sortDirection],
@@ -65,6 +66,17 @@ export const Agents: React.FC = () => {
     error: 'bg-yellow-100 text-yellow-800',
   };
 
+  const fetchDiscoveredAgents = async () => {
+    setDiscovering(true);
+    try {
+      await api.post('/agents/discover');
+    } catch (error) {
+      console.error('Error discovering new agents:', error);
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
   return (
     <div>
       <div className="mb-8">
@@ -90,6 +102,13 @@ export const Agents: React.FC = () => {
             />
           </div>
         </div>
+        <button
+          onClick={fetchDiscoveredAgents}
+          disabled={discovering}
+          className="px-4 py-2 border border-transparent bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 shadow disabled:opacity-50"
+        >
+          {discovering ? 'Discovering...' : 'Discover New Agents'}
+        </button>
       </div>
 
       {/* Table */}
@@ -146,6 +165,12 @@ export const Agents: React.FC = () => {
                     >
                       Description
                     </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -184,6 +209,22 @@ export const Agents: React.FC = () => {
                         </td>
                         <td className="px-3 py-4 text-sm text-gray-500">
                           {agent.description}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-1">
+                          <button
+                            onClick={() => handleEdit(agent)}
+                            className="px-2 py-1 text-xs border border-transparent bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-blue-400 transition duration-150"
+                            title="Edit Agent"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(agent.id)}
+                            className="px-2 py-1 text-xs border border-transparent bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-red-400 transition duration-150"
+                            title="Delete Agent"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))
