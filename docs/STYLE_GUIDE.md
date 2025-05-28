@@ -97,6 +97,12 @@ Last Updated: YYYY-MM-DD
 - Include verification steps
 - Provide troubleshooting tips
 
+### API Endpoint Naming Conventions
+- Use plural forms for all endpoint names (e.g., `agents`, `users`, `devices`).
+- Ensure all endpoint files and related documentation follow this convention.
+- Avoid mixing singular and plural forms in endpoint definitions.
+- Update any existing code to adhere to this standard to prevent confusion and maintain consistency.
+
 ## Best Practices
 
 ### Documentation Maintenance
