@@ -1,96 +1,51 @@
 """Device management models."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from opmas_mgmt_api.db.base_class import Base
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String
-from sqlalchemy.dialects.postgresql import INET
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class Device(Base):
-    """Device model."""
+    """Device model for managing network devices."""
 
     __tablename__ = "devices"
+    __table_args__ = {"extend_existing": True}
 
-    id = Column(PGUUID, primary_key=True, default=uuid4)
-    hostname = Column(String, nullable=False)
-    ip_address = Column(INET, nullable=False)
-    device_type = Column(String, nullable=False)
-    model = Column(String, nullable=True)
-    firmware_version = Column(String, nullable=True)
-    status = Column(String, nullable=False, default="unknown")
-    enabled = Column(Boolean, default=True)
-    device_metadata = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    last_seen = Column(DateTime, nullable=True)
-    agent_id = Column(PGUUID, ForeignKey("agents.id"), nullable=True)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    hostname: Mapped[str] = mapped_column(String(255), nullable=False)
+    ip_address: Mapped[str] = mapped_column(String(50), nullable=False)
+    device_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    firmware_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="offline")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_seen: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
-    agent = relationship("Agent", back_populates="devices")
+    agents = relationship("Agent", back_populates="device")
     status_history = relationship(
         "DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan"
     )
-
-    # Indexes
-    __table_args__ = (
-        Index("ix_devices_hostname", "hostname"),
-        Index("ix_devices_ip_address", "ip_address"),
-        Index("ix_devices_device_type", "device_type"),
-        Index("ix_devices_status", "status"),
-        Index("ix_devices_enabled", "enabled"),
-        Index("ix_devices_agent_id", "agent_id"),
-    )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert model to dictionary."""
-        return {
-            "id": str(self.id),
-            "hostname": self.hostname,
-            "ip_address": str(self.ip_address),
-            "device_type": self.device_type,
-            "model": self.model,
-            "firmware_version": self.firmware_version,
-            "status": self.status,
-            "enabled": self.enabled,
-            "metadata": self.device_metadata,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "last_seen": self.last_seen.isoformat() if self.last_seen else None,
-            "agent_id": str(self.agent_id) if self.agent_id else None,
-        }
 
 
 class DeviceStatusHistory(Base):
     """Device status history model."""
 
     __tablename__ = "device_status_history"
+    __table_args__ = {"extend_existing": True}
 
-    id = Column(PGUUID, primary_key=True, default=uuid4)
-    device_id = Column(PGUUID, ForeignKey("devices.id"), nullable=False)
-    status = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
-    details = Column(JSON, nullable=True)
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    device_id: Mapped[UUID] = mapped_column(ForeignKey("devices.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
 
     # Relationships
     device = relationship("Device", back_populates="status_history")
-
-    # Indexes
-    __table_args__ = (
-        Index("ix_device_status_history_device_id", "device_id"),
-        Index("ix_device_status_history_timestamp", "timestamp"),
-    )
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert model to dictionary."""
-        return {
-            "id": str(self.id),
-            "device_id": str(self.device_id),
-            "status": self.status,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "details": self.details,
-        }
