@@ -51,6 +51,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers
 )
 
 # JWT Configuration
@@ -93,7 +94,7 @@ async def add_process_time_header(
 async def startup_event() -> None:
     """Initialize application on startup."""
     try:
-        await init_db()
+        init_db()
         logger.info("Application startup complete")
 
         # Initialize NATS connection

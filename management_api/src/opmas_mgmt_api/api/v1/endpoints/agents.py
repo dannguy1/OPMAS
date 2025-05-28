@@ -2,6 +2,8 @@
 
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+import logging
+import asyncio
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from opmas_mgmt_api.api.deps import get_db, get_nats
@@ -19,9 +21,11 @@ from opmas_mgmt_api.schemas.agents import (
 )
 from opmas_mgmt_api.services.agents import AgentService
 from sqlalchemy.ext.asyncio import AsyncSession
+from opmas_mgmt_api.core.nats import nats_manager
 
 router = APIRouter()
 route = create_route_builder(router)
+logger = logging.getLogger(__name__)
 
 
 @route.get("", response_model=AgentList)
@@ -161,13 +165,27 @@ async def update_agent_config(
 
 @route.post("/discover", response_model=List[AgentDiscovery])
 async def discover_agents(
-    agent_type: Optional[str] = Query(None, description="Filter by agent type"),
     db: AsyncSession = Depends(get_db),
     nats=Depends(get_nats),
 ) -> List[AgentDiscovery]:
-    """Discover available agents."""
-    service = AgentService(db, nats)
+    """Discover available agents.
+
+    Args:
+        db: Database session
+        nats: NATS client instance
+
+    Returns:
+        List[AgentDiscovery]: List of discovered agents
+    """
     try:
-        return await service.discover_agents(agent_type)
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        service = AgentService(db, nats)
+        agents = await service.discover_agents()
+        logger.info("Retrieved %d registered agents", len(agents))
+        return agents
+
+    except Exception as e:
+        logger.error("Failed to discover agents: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to discover agents. Please try again."
+        )

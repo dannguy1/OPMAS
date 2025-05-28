@@ -6,8 +6,15 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from opmas_mgmt_api.core.config import settings
+from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
+
+# Initialize password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Add PWD_CONTEXT to settings
+settings.PWD_CONTEXT = pwd_context
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -27,7 +34,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         else:
             expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+        encoded_jwt = jwt.encode(to_encode, str(settings.SECRET_KEY), algorithm=settings.ALGORITHM)
         return encoded_jwt
     except Exception as e:
         logger.error(f"Error creating access token: {e}")

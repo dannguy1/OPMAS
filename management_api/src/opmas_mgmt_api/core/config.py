@@ -1,12 +1,12 @@
-"""Application configuration."""
+"""Configuration settings for the management API."""
 
 import logging
 import secrets
 from typing import Any, Dict, List, Optional
 
 from passlib.context import CryptContext
-from pydantic import AnyHttpUrl, Field, PostgresDsn, validator
-from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, Field, PostgresDsn, validator, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -17,47 +17,76 @@ class Settings(BaseSettings):
     # API settings
     API_V1_STR: str = "/api/v1"  # Base path for all API endpoints
     PROJECT_NAME: str = "OPMAS Management API"
-    VERSION: str = "1.0.0"
+    VERSION: str = "0.1.0"
+    DESCRIPTION: str = "Management API for OPMAS Agents"
 
     # Database settings
-    DATABASE_URL: str = "postgresql+asyncpg://opmas:opmas@postgres:5432/opmas"
-    DB_ECHO: bool = True  # Enable SQL query logging for debugging
-    DB_POOL_SIZE: int = 5  # Reduce pool size for development
-    DB_MAX_OVERFLOW: int = 5
-    DB_POOL_TIMEOUT: int = 30
-    SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn] = None
+    DATABASE_URL: Optional[str] = None
+    SQLALCHEMY_DATABASE_URI: Optional[str] = None
+    DB_ECHO: bool = Field(
+        default=True,
+        description="Enable SQL query logging"
+    )
+    DB_POOL_SIZE: int = Field(
+        default=20,
+        description="Database connection pool size"
+    )
+    DB_MAX_OVERFLOW: int = Field(
+        default=10,
+        description="Maximum number of connections that can be created beyond pool_size"
+    )
+    DB_POOL_TIMEOUT: int = Field(
+        default=30,
+        description="Timeout for getting a connection from the pool"
+    )
 
     # NATS settings
-    NATS_URL: str = "nats://nats:4222"
-    NATS_CLUSTER_ID: str = "opmas-cluster"
-    NATS_USERNAME: Optional[str] = None
-    NATS_PASSWORD: Optional[str] = None
+    NATS_URL: str = Field(
+        default="nats://localhost:4222",
+        description="NATS server URL"
+    )
+    NATS_CLUSTER_ID: str = Field(
+        default="opmas-cluster",
+        description="NATS cluster ID"
+    )
 
     # Redis settings
     REDIS_URL: str = "redis://redis:6379/0"
-    REDIS_PASSWORD: Optional[str] = None
-
-    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
-        """Assemble database connection string."""
-        if isinstance(v, str):
-            return v
-        return values.get("DATABASE_URL")
 
     # Security settings
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 24
-    PWD_CONTEXT: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    SECRET_KEY: str = Field(
+        default="dev-secret-key-change-in-production",
+        description="Secret key for JWT token generation"
+    )
+    ALGORITHM: str = Field(
+        default="HS256",
+        description="Algorithm used for JWT token generation"
+    )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=30,
+        description="Access token expiration time in minutes"
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=7,
+        description="Refresh token expiration time in days"
+    )
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = Field(
+        default=24,
+        description="Password reset token expiration time in hours"
+    )
 
     # CORS settings
     CORS_ORIGINS: str = ""  # Changed to str to handle raw input
-    BACKEND_CORS_ORIGINS: list[str] = ["*"]
+    BACKEND_CORS_ORIGINS: list[str] = Field(
+        default=["http://localhost:3000"],
+        description="List of allowed CORS origins"
+    )
 
     # Logging settings
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="Logging level"
+    )
     LOG_FORMAT: str = "json"
     LOG_FILE: str = "logs/opmas_mgmt_api.log"
 
@@ -77,6 +106,21 @@ class Settings(BaseSettings):
     # File upload settings
     MAX_UPLOAD_SIZE: int = 10485760  # 10MB
     ALLOWED_UPLOAD_EXTENSIONS: List[str] = ["json", "yaml", "yml", "txt"]
+
+    @validator("DATABASE_URL", pre=True)
+    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
+        """Assemble database connection URI."""
+        if isinstance(v, str):
+            return v
+        if values.get("SQLALCHEMY_DATABASE_URI"):
+            return values["SQLALCHEMY_DATABASE_URI"]
+        return PostgresDsn.build(
+            scheme="postgresql+asyncpg",
+            username=values.get("POSTGRES_USER"),
+            password=values.get("POSTGRES_PASSWORD"),
+            host=values.get("POSTGRES_SERVER"),
+            path=f"/{values.get('POSTGRES_DB') or ''}",
+        )
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: str | List[str], values: dict) -> List[str]:
@@ -102,11 +146,13 @@ class Settings(BaseSettings):
             return cls.assemble_cors_origins(values["CORS_ORIGINS"], values)
         return v
 
-    class Config:
-        """Pydantic config."""
-
-        case_sensitive = True
-        env_file = ".env"
+    # Model configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="allow"  # Allow extra fields in the settings
+    )
 
 
 # Create global settings instance

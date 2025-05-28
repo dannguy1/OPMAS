@@ -40,7 +40,8 @@ async def login(
 @router.get("/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)) -> User:
     """Get current user."""
-    return current_user
+    response = User.from_orm(current_user)
+    return response
 
 
 @router.post("/register", response_model=User)

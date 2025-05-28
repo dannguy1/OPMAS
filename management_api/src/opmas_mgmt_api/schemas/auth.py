@@ -50,7 +50,7 @@ class UserInDB(UserBase):
     id: UUID
     hashed_password: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         """Pydantic config."""
@@ -63,7 +63,7 @@ class User(UserBase):
 
     id: UUID
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         """Pydantic config."""

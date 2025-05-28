@@ -58,6 +58,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> O
         if not user:
             return None
         if not verify_password(password, user.hashed_password):
+            logger.warning(f"Password verification failed for user: {username}")
             return None
         return user
     except Exception as e:

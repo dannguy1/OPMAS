@@ -1,8 +1,6 @@
 """Script to initialize database tables."""
 
-import asyncio
 import logging
-
 from opmas_mgmt_api.db.base import Base
 from opmas_mgmt_api.db.session import engine
 from sqlalchemy import text
@@ -10,19 +8,18 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 
-async def init_db() -> None:
+def init_db() -> None:
     """Initialize database tables."""
     try:
         # Create tables
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
 
         # Enable UUID extension if not already enabled
-        async with engine.begin() as conn:
-            await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
             # Set default UUID generation for users table
-            await conn.execute(
+            conn.execute(
                 text(
                     """
                 DO $$
@@ -49,4 +46,4 @@ async def init_db() -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    asyncio.run(init_db())
+    init_db()

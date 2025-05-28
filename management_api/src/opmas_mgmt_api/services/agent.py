@@ -39,7 +39,17 @@ class AgentService:
         query = query.offset(skip).limit(limit)
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        agents = result.scalars().all()
+        for agent in agents:
+            if not hasattr(agent, 'hostname'):
+                agent.hostname = None
+            if not hasattr(agent, 'ip_address'):
+                agent.ip_address = None
+            if not hasattr(agent, 'port'):
+                agent.port = None
+            if not hasattr(agent, 'confidence'):
+                agent.confidence = None
+        return agents
 
     async def get_agent(self, agent_id: str) -> Optional[Agent]:
         """Get agent by ID."""

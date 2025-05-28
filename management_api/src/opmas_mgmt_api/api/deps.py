@@ -11,8 +11,12 @@ from opmas_mgmt_api.db.session import async_session
 from opmas_mgmt_api.schemas.auth import User
 from opmas_mgmt_api.services.user import get_user_by_username
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
+from opmas_mgmt_api.core.nats import NATSManager
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+
+logger = logging.getLogger(__name__)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -43,20 +47,21 @@ async def get_current_user(
 
     user = await get_user_by_username(db, username)
     if user is None:
+        logger.error(f"User not found for username: {username}")
         raise credentials_exception
     return user
 
 
-async def get_nats() -> Optional[nats.Client]:
-    """Get NATS client.
+async def get_nats() -> NATSManager:
+    """Get NATS manager instance.
 
     Returns:
-        Optional[nats.Client]: NATS client instance
+        NATSManager: NATS manager instance
     """
     try:
-        nc = nats.Client()
-        await nc.connect(settings.NATS_URL)
-        return nc
+        nats_manager = NATSManager()
+        await nats_manager.connect()
+        return nats_manager
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
