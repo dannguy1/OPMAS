@@ -1,5 +1,6 @@
 """Base agent implementation for OPMAS agents."""  # noqa: D200
 from datetime import datetime
+import json
 from typing import Any, Dict, Optional
 
 import structlog
@@ -29,6 +30,25 @@ class BaseAgent:
                 self.config.nats_url,
                 name=f"{self.config.agent_id}-{self.config.agent_type}",
             )
+            logger.info(
+                "connected_to_nats",
+                agent_id=self.config.agent_id,
+                agent_type=self.config.agent_type,
+                nats_url=self.config.nats_url
+            )
+            
+            # Subscribe to discovery requests
+            await self.nats_client.subscribe(
+                "agent.discovery",
+                cb=self._handle_discovery_request
+            )
+            logger.info(
+                "subscribed_to_discovery",
+                agent_id=self.config.agent_id,
+                agent_type=self.config.agent_type,
+                topic="agent.discovery"
+            )
+            
             self._running = True
             self._start_time = datetime.utcnow()
             self._last_heartbeat = self._start_time
@@ -38,7 +58,50 @@ class BaseAgent:
                 agent_type=self.config.agent_type,
             )
         except Exception as e:
+            logger.error(
+                "failed_to_start_agent",
+                error=str(e),
+                agent_id=self.config.agent_id,
+                agent_type=self.config.agent_type
+            )
             raise AgentError(f"Failed to start agent: {str(e)}") from e
+
+    async def _handle_discovery_request(self, msg) -> None:
+        """Handle agent discovery request."""
+        try:
+            # Parse the discovery request
+            request = json.loads(msg.data.decode())
+            logger.debug(
+                "received_discovery_request",
+                request=request,
+                agent_id=self.config.agent_id
+            )
+
+            # Prepare agent information
+            agent_info = {
+                "agent_id": self.config.agent_id,
+                "agent_type": self.config.agent_type,
+                "status": "active",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+
+            # Publish response
+            await self.nats_client.publish(
+                "agent.discovery.response",
+                json.dumps(agent_info).encode()
+            )
+            logger.info(
+                "sent_discovery_response",
+                agent_id=self.config.agent_id,
+                agent_type=self.config.agent_type,
+                response=agent_info
+            )
+        except Exception as e:
+            logger.error(
+                "discovery_request_error",
+                error=str(e),
+                agent_id=self.config.agent_id
+            )
 
     async def stop(self) -> None:
         """Stop the agent and disconnect from NATS."""

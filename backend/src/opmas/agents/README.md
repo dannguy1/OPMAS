@@ -1,6 +1,83 @@
 # OPMAS Agents
 
-This directory contains the implementation of OPMAS agents, which are responsible for monitoring, analyzing, and reporting on various aspects of the system.
+This directory contains agent packages for the OPMAS system. Each agent package should be a self-contained directory with its own configuration and implementation.
+
+## Agent Package Structure
+
+Each agent package should have the following structure:
+
+```
+agent_package/
+├── .env                 # Agent configuration
+├── agent.py            # Agent implementation
+├── requirements.txt    # Python dependencies
+├── Dockerfile         # Container definition
+└── README.md          # Package documentation
+```
+
+### .env File Configuration
+
+The `.env` file is used to configure the agent. It must contain the following variables:
+
+- `AGENT_NAME`: The display name of the agent
+- `AGENT_DESCRIPTION`: A description of the agent's purpose and capabilities
+- `AGENT_ID`: (Optional) A unique identifier for the agent. If not provided, the system will:
+  - Generate a new UUID
+  - Add it to the .env file automatically
+  - Use it to register the agent in the database
+
+Note: The `AGENT_ID` is used to maintain agent identity across restarts and updates. If you remove the `AGENT_ID` from the .env file, the system will treat it as a new agent and generate a new ID.
+
+## Agent Discovery
+
+The system automatically discovers agents by:
+1. Scanning this directory for agent packages
+2. Reading the .env file to get agent configuration
+3. Checking if the agent is already registered in the database
+4. If not registered:
+   - Generates an ID if not present in .env
+   - Creates a new database entry
+   - Returns the agent in discovery results
+
+## Skip Patterns
+
+The following package names are automatically skipped during discovery:
+- `__pycache__`
+- `_template`
+- `base`
+- `example`
+- `test`
+
+## Creating a New Agent
+
+1. Create a new directory for your agent
+2. Copy the required files from `base_agent_package`
+3. Create a `.env` file with at least:
+   ```
+   AGENT_NAME=Your Agent Name
+   AGENT_DESCRIPTION=Description of your agent
+   ```
+4. Implement your agent logic in `agent.py`
+5. Add any required dependencies to `requirements.txt`
+
+The system will automatically:
+- Generate an `AGENT_ID` if not provided
+- Register the agent in the database
+- Make it available for use
+
+## Testing Your Agent
+
+1. Place your agent package in this directory
+2. Ensure it has a valid `.env` file
+3. The system will discover and register it automatically
+4. You can verify registration using the management API
+
+## Best Practices
+
+1. Always include a descriptive `AGENT_NAME` and `AGENT_DESCRIPTION`
+2. Let the system generate the `AGENT_ID` unless you need to maintain a specific identity
+3. Keep your agent package self-contained
+4. Document any special requirements or configuration in your package's README.md
 
 ## Structure
 
