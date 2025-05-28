@@ -11,21 +11,23 @@ class AgentBase(BaseModel):
     """Base agent schema."""
 
     name: str = Field(..., description="Agent name")
-    agent_type: str = Field(..., description="Type of agent (e.g., 'wifi', 'security', 'health')")
+    agent_type: str = Field(..., description="Type of agent")
     hostname: str = Field(..., description="Agent hostname")
     ip_address: IPvAnyAddress = Field(..., description="Agent IP address")
     port: int = Field(..., ge=1, le=65535, description="Agent port")
     status: str = Field(default="unknown", description="Agent status")
     enabled: bool = Field(default=True, description="Whether the agent is enabled")
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional agent metadata"
+    agent_metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional agent metadata"
     )
-    config: Optional[Dict[str, Any]] = Field(default=None, description="Agent configuration")
+    config: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Agent configuration"
+    )
 
     @validator("agent_type")
     def validate_agent_type(cls, v):
         """Validate agent type."""
-        valid_types = ["wifi", "security", "health", "wan"]
+        valid_types = ["custom", "system", "network", "security"]
         if v not in valid_types:
             raise ValueError(f"Invalid agent type. Must be one of: {', '.join(valid_types)}")
         return v
@@ -33,20 +35,20 @@ class AgentBase(BaseModel):
     @validator("status")
     def validate_status(cls, v):
         """Validate agent status."""
-        valid_statuses = ["unknown", "online", "offline", "error", "maintenance"]
+        valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
         if v not in valid_statuses:
             raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         return v
 
 
 class AgentCreate(AgentBase):
-    """Schema for creating an agent."""
+    """Agent creation schema."""
 
     pass
 
 
 class AgentUpdate(BaseModel):
-    """Schema for updating an agent."""
+    """Agent update schema."""
 
     name: Optional[str] = Field(None, description="Agent name")
     agent_type: Optional[str] = Field(None, description="Type of agent")
@@ -55,36 +57,55 @@ class AgentUpdate(BaseModel):
     port: Optional[int] = Field(None, ge=1, le=65535, description="Agent port")
     status: Optional[str] = Field(None, description="Agent status")
     enabled: Optional[bool] = Field(None, description="Whether the agent is enabled")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional agent metadata")
+    agent_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional agent metadata")
     config: Optional[Dict[str, Any]] = Field(None, description="Agent configuration")
 
     @validator("agent_type")
     def validate_agent_type(cls, v):
         """Validate agent type."""
-        if v is not None:
-            valid_types = ["wifi", "security", "health", "wan"]
-            if v not in valid_types:
-                raise ValueError(f"Invalid agent type. Must be one of: {', '.join(valid_types)}")
+        if v is None:
+            return v
+        valid_types = ["custom", "system", "network", "security"]
+        if v not in valid_types:
+            raise ValueError(f"Invalid agent type. Must be one of: {', '.join(valid_types)}")
         return v
 
     @validator("status")
     def validate_status(cls, v):
         """Validate agent status."""
-        if v is not None:
-            valid_statuses = ["unknown", "online", "offline", "error", "maintenance"]
-            if v not in valid_statuses:
-                raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        if v is None:
+            return v
+        valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
+        if v not in valid_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
         return v
 
 
 class AgentResponse(AgentBase):
-    """Schema for agent response."""
+    """Agent response schema."""
 
     id: UUID = Field(..., description="Agent ID")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     last_seen: Optional[datetime] = Field(None, description="Last time the agent was seen")
     device_id: Optional[UUID] = Field(None, description="Associated device ID")
+    agent_type: Optional[str] = Field(default="unknown", description="Type of agent")
+    status: Optional[str] = Field(default="unknown", description="Agent status")
+    agent_metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional agent metadata"
+    )
+    hostname: Optional[str] = Field(default=None, description="Agent hostname")
+    ip_address: Optional[IPvAnyAddress] = Field(default=None, description="Agent IP address")
+    port: Optional[int] = Field(default=None, ge=1, le=65535, description="Agent port")
+    confidence: Optional[float] = Field(default=None, description="Confidence score of discovery")
+
+    @validator("status")
+    def validate_status(cls, v):
+        """Validate agent status."""
+        valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
+        if v not in valid_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        return v
 
     class Config:
         """Pydantic config."""
@@ -92,26 +113,25 @@ class AgentResponse(AgentBase):
         from_attributes = True
 
 
-class AgentList(BaseModel):
-    """Schema for list of agents."""
-
-    items: List[AgentResponse] = Field(..., description="List of agents")
-    total: int = Field(..., description="Total number of agents")
-    skip: int = Field(..., description="Number of records skipped")
-    limit: int = Field(..., description="Maximum number of records returned")
-
-
 class AgentStatus(BaseModel):
-    """Schema for agent status."""
+    """Agent status schema."""
 
     status: str = Field(..., description="Agent status")
-    last_seen: Optional[datetime] = Field(None, description="Last time the agent was seen")
-    device_status: Optional[str] = Field(None, description="Associated device status")
-    details: Optional[Dict[str, Any]] = Field(None, description="Additional status details")
+    timestamp: datetime = Field(..., description="Status timestamp")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Status details")
+    metrics: Dict[str, Any] = Field(default_factory=dict, description="Agent metrics")
+
+    @validator("status")
+    def validate_status(cls, v):
+        """Validate agent status."""
+        valid_statuses = ["unknown", "online", "offline", "error", "maintenance", "active"]
+        if v not in valid_statuses:
+            raise ValueError(f"Invalid status. Must be one of: {', '.join(valid_statuses)}")
+        return v
 
 
 class AgentDiscovery(BaseModel):
-    """Schema for agent discovery."""
+    """Agent discovery schema."""
 
     name: str = Field(..., description="Agent name")
     agent_type: str = Field(..., description="Type of agent")
@@ -119,17 +139,17 @@ class AgentDiscovery(BaseModel):
     ip_address: IPvAnyAddress = Field(..., description="Agent IP address")
     port: int = Field(..., ge=1, le=65535, description="Agent port")
     confidence: float = Field(..., description="Confidence score of discovery")
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional discovery metadata"
+    agent_metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional discovery metadata"
     )
 
 
 class AgentConfig(BaseModel):
-    """Schema for agent configuration."""
+    """Agent configuration schema."""
 
     config: Dict[str, Any] = Field(..., description="Agent configuration")
     version: str = Field(..., description="Configuration version")
     last_updated: datetime = Field(..., description="Last update timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional configuration metadata"
+    agent_metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Additional configuration metadata"
     )
