@@ -4,12 +4,387 @@
 This document outlines the implementation plan for the OPMAS Agent Management System, focusing on the asyncio-based process management and multi-agent execution capabilities.
 
 ## Implementation Status
-- [ ] Core Infrastructure
-- [ ] Agent Base Class
-- [ ] Management API
-- [ ] Agent Package
+- [x] Core Infrastructure
+  - [x] Database Schema Updates
+  - [x] Agent Process Management
+  - [x] Agent Controller Implementation
+- [x] Agent Base Class
+  - [x] Base Agent Implementation
+  - [x] Error Handling
+  - [x] Logging
+  - [x] Monitoring
+  - [x] Recovery
+  - [x] Status Management
+- [x] Management API
+  - [x] API Endpoints
+  - [x] Status Service
+  - [x] Recovery Service
+  - [x] Error Handling Service
+- [x] Agent Package
+  - [x] Package Structure
+  - [x] Configuration Management
+  - [x] Environment Setup
 - [ ] Testing
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+  - [ ] Performance Tests
+  - [ ] Recovery Tests
 - [ ] Documentation
+  - [ ] API Documentation
+  - [ ] Configuration Guide
+  - [ ] Deployment Guide
+  - [ ] Troubleshooting Guide
+
+## Remaining Tasks
+
+### 1. Testing Infrastructure
+- [ ] Unit tests for each component
+- [ ] Integration tests for agent lifecycle
+- [ ] Performance tests for monitoring
+- [ ] Recovery scenario tests
+- [ ] Mock services for testing
+
+### 2. Documentation
+- [ ] API documentation
+- [ ] Usage examples
+- [ ] Configuration guide
+- [ ] Troubleshooting guide
+- [ ] Architecture diagrams
+
+### 3. Security Layer
+- [ ] Agent authentication
+- [ ] Command authorization
+- [ ] Secure communication
+- [ ] Resource isolation
+- [ ] Audit logging
+
+### 4. Enhanced Monitoring
+- [ ] Custom metric collection
+- [ ] Alert thresholds
+- [ ] Metric aggregation
+- [ ] Performance baselines
+- [ ] Resource forecasting
+
+### 5. Advanced Recovery
+- [ ] Automatic recovery policies
+- [ ] Strategy selection
+- [ ] State persistence
+- [ ] Recovery validation
+- [ ] Rollback verification
+
+### 6. Error Handling Improvements
+- [ ] Specific error types
+- [ ] Error correlation
+- [ ] Error reporting
+- [ ] Recovery suggestions
+- [ ] Error analytics
+
+### 7. Process Management Enhancements
+- [ ] Process isolation
+- [ ] Resource quotas
+- [ ] Process supervision
+- [ ] Graceful shutdown
+- [ ] State persistence
+
+### 8. Logging Improvements
+- [ ] Log aggregation
+- [ ] Log analysis
+- [ ] Log retention
+- [ ] Log search
+- [ ] Log alerts
+
+### 9. Status Management Enhancements
+- [ ] Status transitions
+- [ ] Status validation
+- [ ] Status dependencies
+- [ ] Status notifications
+- [ ] Status analytics
+
+### 10. Deployment & Operations
+- [ ] Deployment scripts
+- [ ] Health checks
+- [ ] Backup procedures
+- [ ] Rollback procedures
+- [ ] Monitoring setup
+
+### 11. Performance Optimization
+- [ ] Database query optimization
+- [ ] Connection pooling
+- [ ] Caching strategy
+- [ ] Resource usage optimization
+- [ ] Async operation optimization
+
+### 12. Integration Features
+- [ ] External system integration
+- [ ] API endpoints
+- [ ] Webhook support
+- [ ] Event streaming
+- [ ] Data export/import
+
+## Known Issues
+- Circular dependencies in SQLAlchemy models need to be carefully managed
+- Model relationships must be properly defined on both sides
+- Table redefinition issues can occur if models are imported multiple times
+- Need to ensure proper initialization order of models
+- Need to handle bidirectional relationships carefully
+
+## Lessons Learned
+1. Model Design:
+   - Use `__table_args__ = {"extend_existing": True}` to prevent table redefinition issues
+   - Define bidirectional relationships explicitly on both sides
+   - Use proper foreign key constraints and nullable flags
+   - Consider using UUID for primary keys
+   - Include timestamps for auditing
+
+2. Agent Controller:
+   - Implement proper process management with resource limits
+   - Use asyncio for non-blocking operations
+   - Implement robust error handling and recovery
+   - Monitor agent health and resource usage
+   - Support graceful shutdown
+
+3. Agent Discovery:
+   - Implement periodic discovery of new agent packages
+   - Support automatic registration of new agents
+   - Validate agent configurations
+   - Handle agent versioning
+   - Support agent updates
+
+4. Process Management:
+   - Implement proper process isolation
+   - Set resource limits (CPU, memory)
+   - Monitor process health
+   - Handle process crashes
+   - Support graceful shutdown
+
+5. Status Management:
+   - Track agent status changes
+   - Monitor resource usage
+   - Implement health checks
+   - Support status notifications
+   - Maintain status history
+
+6. Error Handling:
+   - Implement comprehensive error tracking
+   - Support error recovery
+   - Log errors with context
+   - Notify on critical errors
+   - Maintain error history
+
+7. Logging:
+   - Implement structured logging
+   - Support log rotation
+   - Include context in logs
+   - Support different log levels
+   - Maintain audit trail
+
+8. Configuration:
+   - Support multiple configuration sources
+   - Validate configurations
+   - Support runtime updates
+   - Handle sensitive data
+   - Support environment-specific configs
+
+9. Security:
+   - Implement proper authentication
+   - Support authorization
+   - Secure communication
+   - Resource isolation
+   - Audit logging
+
+10. Monitoring:
+    - Track resource usage
+    - Monitor agent health
+    - Support custom metrics
+    - Implement alerts
+    - Support dashboards
+
+## Implementation Notes
+
+### Model Relationships
+```python
+# Example of proper bidirectional relationship
+class User(Base):
+    # ...
+    created_devices = relationship("Device", back_populates="created_by", foreign_keys="Device.created_by_id")
+    updated_devices = relationship("Device", back_populates="updated_by", foreign_keys="Device.updated_by_id")
+    owned_devices = relationship("Device", back_populates="owner", foreign_keys="Device.owner_id")
+
+class Device(Base):
+    # ...
+    created_by_id = mapped_column(String(36), ForeignKey("users.id"))
+    updated_by_id = mapped_column(String(36), ForeignKey("users.id"))
+    owner_id = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+
+    created_by = relationship("User", foreign_keys=[created_by_id], back_populates="created_devices")
+    updated_by = relationship("User", foreign_keys=[updated_by_id], back_populates="updated_devices")
+    owner = relationship("User", foreign_keys=[owner_id], back_populates="owned_devices")
+```
+
+### Agent Controller Implementation
+```python
+class AgentController:
+    def __init__(self, db: AsyncSession, nats: NATSManager):
+        self.db = db
+        self.nats = nats
+        self.agent_processes: Dict[str, AgentProcess] = {}
+        self._discovery_task: Optional[asyncio.Task] = None
+        self._monitor_task: Optional[asyncio.Task] = None
+
+    async def start(self):
+        """Start the controller."""
+        self._discovery_task = asyncio.create_task(self._discover_agents())
+        self._monitor_task = asyncio.create_task(self._monitor_all_agents())
+
+    async def _discover_agents(self):
+        """Periodically discover new agent packages."""
+        while True:
+            try:
+                discovered = await self.discover_agent_packages()
+                for package in discovered:
+                    agent = await self.get_agent_by_type(package.type)
+                    if not agent:
+                        agent = await self.register_agent(package)
+                await asyncio.sleep(300)  # Check every 5 minutes
+            except Exception as e:
+                logger.error(f"Error in discovery task: {e}")
+                await asyncio.sleep(60)
+
+    async def _monitor_all_agents(self):
+        """Monitor all running agents."""
+        while True:
+            try:
+                for agent_id, process in list(self.agent_processes.items()):
+                    status = process.get_status()
+                    await self.update_agent_status(agent_id, status)
+                    if self._check_resource_limits(process):
+                        await self.restart_agent(agent_id)
+                await asyncio.sleep(10)
+            except Exception as e:
+                logger.error(f"Error in monitoring task: {e}")
+                await asyncio.sleep(60)
+```
+
+### Process Management
+```python
+class AgentProcess:
+    def __init__(self, agent_id: str, config: Dict):
+        self.agent_id = agent_id
+        self.config = config
+        self.process: Optional[asyncio.subprocess.Process] = None
+        self.monitor_task: Optional[asyncio.Task] = None
+        self.status = "stopped"
+        self.pid: Optional[int] = None
+        self.start_time: Optional[datetime] = None
+        self.last_heartbeat: Optional[datetime] = None
+        self.execution_stats = {
+            "restarts": 0,
+            "total_runtime": 0,
+            "last_error": None,
+            "resource_usage": {}
+        }
+
+    async def start(self) -> bool:
+        """Start the agent process."""
+        try:
+            self.process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                f"backend/scripts/run_{self.config['type']}_agent.py",
+                self.agent_id,
+                env=self._prepare_environment(),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                preexec_fn=self._set_resource_limits
+            )
+            self.pid = self.process.pid
+            self.start_time = datetime.utcnow()
+            self.status = "starting"
+            self.monitor_task = asyncio.create_task(self._monitor())
+            return True
+        except Exception as e:
+            logger.error(f"Failed to start agent {self.agent_id}: {e}")
+            return False
+```
+
+### Status Management
+```python
+class StatusService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self._status_cache: Dict[str, Dict] = {}
+        self._cleanup_task: Optional[asyncio.Task] = None
+
+    async def update_agent_status(
+        self,
+        agent_id: str,
+        process_status: ProcessStatus,
+        health_status: HealthStatus,
+        recovery_status: RecoveryStatus,
+        metrics: Optional[Dict] = None,
+        error: Optional[str] = None
+    ):
+        """Update agent status."""
+        try:
+            status = {
+                "process_status": process_status,
+                "health_status": health_status,
+                "recovery_status": recovery_status,
+                "last_heartbeat": datetime.utcnow(),
+                "last_error": error,
+                "updated_at": datetime.utcnow()
+            }
+            await self.db.execute(
+                """
+                INSERT INTO agent_status (
+                    agent_id, process_status, health_status, recovery_status,
+                    last_heartbeat, last_error, updated_at
+                ) VALUES (
+                    :agent_id, :process_status, :health_status, :recovery_status,
+                    :last_heartbeat, :last_error, :updated_at
+                )
+                ON CONFLICT (agent_id) DO UPDATE SET
+                    process_status = :process_status,
+                    health_status = :health_status,
+                    recovery_status = :recovery_status,
+                    last_heartbeat = :last_heartbeat,
+                    last_error = :last_error,
+                    updated_at = :updated_at
+                """,
+                {**status, "agent_id": agent_id}
+            )
+            self._status_cache[agent_id] = status
+            await self._record_status_change(agent_id, status)
+        except Exception as e:
+            logger.error(f"Failed to update agent status: {e}")
+            raise
+```
+
+## Future Improvements
+1. Add resource usage graphs
+2. Implement agent dependencies
+3. Add configuration versioning
+4. Create agent templates
+5. Add deployment automation
+6. Add advanced recovery strategies
+7. Implement metric aggregation
+8. Add alerting system
+9. Create status dashboard
+10. Add audit logging
+11. Add log aggregation
+12. Add error pattern analysis
+13. Add automated error resolution
+14. Add log retention policies
+15. Add log search capabilities
+16. Add agent performance profiling
+17. Add agent dependency management
+18. Add agent configuration validation
+19. Add agent state persistence
+20. Add agent upgrade mechanism
+21. Add interactive documentation
+22. Add video tutorials
+23. Add example implementations
+24. Add best practices guide
+25. Add security guide
 
 ## 1. Core Infrastructure
 
