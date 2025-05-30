@@ -1,0 +1,106 @@
+# Agent Configuration
+
+# Common settings for all agents
+common:
+  log_level: INFO
+  heartbeat_interval: 30  # seconds
+  metrics_interval: 60    # seconds
+  max_retries: 3
+  retry_delay: 5         # seconds
+
+# Security agent configuration
+security:
+  agent_id: security-001
+  name: SecurityAgent
+  type: security
+  version: 1.0.0
+  rules:
+    - id: rule-001
+      type: file_permission
+      severity: high
+      description: Check for world-writable files
+      parameters:
+        paths:
+          - /etc
+          - /var/log
+        max_permissions: 0o644
+    - id: rule-002
+      type: network_access
+      severity: medium
+      description: Check for open ports
+      parameters:
+        ports:
+          - 22
+          - 80
+          - 443
+        allowed_hosts:
+          - 127.0.0.1
+    - id: rule-003
+      type: user_activity
+      severity: low
+      description: Check for failed login attempts
+      parameters:
+        max_attempts: 3
+        time_window: 300  # seconds
+
+# Network agent configuration
+network:
+  agent_id: network-001
+  name: NetworkAgent
+  type: network
+  version: 1.0.0
+  interfaces:
+    - name: eth0
+      monitor: true
+    - name: wlan0
+      monitor: true
+  metrics:
+    - type: bandwidth
+      interval: 60
+    - type: latency
+      interval: 30
+    - type: packet_loss
+      interval: 60
+
+# Storage agent configuration
+storage:
+  agent_id: storage-001
+  name: StorageAgent
+  type: storage
+  version: 1.0.0
+  volumes:
+    - path: /
+      monitor: true
+    - path: /home
+      monitor: true
+  metrics:
+    - type: space
+      interval: 300
+    - type: iops
+      interval: 60
+    - type: latency
+      interval: 60
+
+# Compute agent configuration
+compute:
+  agent_id: compute-001
+  name: ComputeAgent
+  type: compute
+  version: 1.0.0
+  resources:
+    cpu:
+      monitor: true
+      threshold: 80  # percent
+    memory:
+      monitor: true
+      threshold: 90  # percent
+    processes:
+      monitor: true
+      max_count: 1000
+  metrics:
+    - type: cpu_usage
+      interval: 30
+    - type: memory_usage
+      interval: 30
+    - type: process_count
+      interval: 60 

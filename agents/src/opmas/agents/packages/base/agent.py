@@ -39,14 +39,14 @@ class BaseAgent:
             
             # Subscribe to discovery requests
             await self.nats_client.subscribe(
-                "agent.discovery",
+                "agent.discovery.broadcast",
                 cb=self._handle_discovery_request
             )
             logger.info(
                 "subscribed_to_discovery",
                 agent_id=self.config.agent_id,
                 agent_type=self.config.agent_type,
-                topic="agent.discovery"
+                topic="agent.discovery.broadcast"
             )
             
             self._running = True
@@ -81,8 +81,16 @@ class BaseAgent:
             agent_info = {
                 "agent_id": self.config.agent_id,
                 "agent_type": self.config.agent_type,
-                "status": "active",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
+                "agent_metadata": {
+                    "name": self.config.name,
+                    "version": self.config.version,
+                    "description": self.config.description,
+                    "capabilities": self.config.capabilities,
+                    "status": "active",
+                    "config": self.config.model_dump(),
+                    "health": await self.check_health()
+                }
             }
 
             # Publish response
@@ -164,7 +172,6 @@ class BaseAgent:
             if self._last_heartbeat
             else None,
         }
-
     async def update_heartbeat(self) -> None:
         """Update the agent's heartbeat timestamp."""
         self._last_heartbeat = datetime.utcnow()
@@ -173,3 +180,4 @@ class BaseAgent:
             agent_id=self.config.agent_id,
             timestamp=self._last_heartbeat.isoformat(),
         )
+

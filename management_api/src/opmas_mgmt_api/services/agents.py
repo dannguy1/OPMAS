@@ -26,6 +26,83 @@ class AgentService:
         self.db = db
         self.nats = nats
         self._discovery_responses = []
+        self._registration_requests = {}
+
+    async def start(self) -> None:
+        """Start the agent service."""
+        # Subscribe to registration requests
+        await self.nats.subscribe("agent.registration.request", callback=self._handle_registration_request)
+        logger.info("Subscribed to agent.registration.request")
+
+    async def _handle_registration_request(self, msg) -> None:
+        """Handle agent registration request."""
+        try:
+            request = json.loads(msg.data.decode())
+            agent_id = request.get("agent_id")
+            agent_type = request.get("agent_type")
+            agent_metadata = request.get("agent_metadata", {})
+
+            if not agent_id or not agent_type:
+                logger.warning("Invalid registration request: missing required fields")
+                return
+
+            # Check if agent exists
+            query = select(Agent).where(Agent.id == agent_id)
+            result = await self.db.execute(query)
+            existing_agent = result.scalar_one_or_none()
+
+            try:
+                if not existing_agent:
+                    # Create new agent
+                    new_agent = Agent(
+                        id=agent_id,
+                        name=agent_metadata.get("name", f"{agent_type}-{agent_id[:8]}"),
+                        agent_type=agent_type,
+                        status="active",
+                        version=agent_metadata.get("version", "1.0.0"),
+                        config=agent_metadata.get("config", {}),
+                        agent_metadata=agent_metadata,
+                        capabilities=agent_metadata.get("capabilities", []),
+                        last_heartbeat=datetime.utcnow(),
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                    )
+                    self.db.add(new_agent)
+                    await self.db.commit()
+                    logger.info("Registered new agent from sync: %s", agent_id)
+                else:
+                    # Update existing agent
+                    existing_agent.last_heartbeat = datetime.utcnow()
+                    existing_agent.status = "active"
+                    existing_agent.agent_metadata = agent_metadata
+                    existing_agent.updated_at = datetime.utcnow()
+                    await self.db.commit()
+                    logger.info("Updated existing agent from sync: %s", agent_id)
+
+                # Send confirmation
+                await self.nats.publish(
+                    "agent.registration.confirm",
+                    json.dumps({
+                        "agent_id": agent_id,
+                        "success": True,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }).encode()
+                )
+            except Exception as e:
+                logger.error("Error processing registration request: %s", e)
+                await self.db.rollback()
+                # Send failure confirmation
+                await self.nats.publish(
+                    "agent.registration.confirm",
+                    json.dumps({
+                        "agent_id": agent_id,
+                        "success": False,
+                        "error": str(e),
+                        "timestamp": datetime.utcnow().isoformat()
+                    }).encode()
+                )
+        except Exception as e:
+            logger.error("Error handling registration request: %s", e)
 
     async def list_agents(
         self,
@@ -256,6 +333,7 @@ class AgentService:
         try:
             # Clear previous responses
             self._discovery_responses = []
+            logger.info("Starting agent discovery process")
 
             # Subscribe to discovery responses
             async def handle_response(msg):
@@ -267,18 +345,23 @@ class AgentService:
                     logger.error("Error processing discovery response: %s", e)
 
             # Subscribe to responses
+            logger.info("Subscribing to agent.discovery.response")
             await self.nats.subscribe("agent.discovery.response", callback=handle_response)
+            logger.info("Successfully subscribed to agent.discovery.response")
 
             # Publish discovery request to NATS
             discovery_payload = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "type": "discovery_request",
             }
-            await self.nats.publish("agent.discovery", discovery_payload)
-            logger.info("Published agent discovery request with payload: %s", discovery_payload)
+            logger.info("Publishing discovery request to agent.discovery.broadcast: %s", discovery_payload)
+            await self.nats.publish("agent.discovery.broadcast", json.dumps(discovery_payload).encode())
+            logger.info("Successfully published discovery request")
 
             # Wait for responses
-            await asyncio.sleep(2)
+            logger.info("Waiting for discovery responses...")
+            await asyncio.sleep(5)  # Increased timeout to 5 seconds
+            logger.info("Discovery wait complete. Received %d responses", len(self._discovery_responses))
 
             # Process responses and register new agents
             for response in self._discovery_responses:
@@ -288,15 +371,22 @@ class AgentService:
                     result = await self.db.execute(query)
                     existing_agent = result.scalar_one_or_none()
 
+                    # Extract agent metadata
+                    agent_metadata = response.get("agent_metadata", {})
+                    agent_type = response.get("agent_type", "unknown")
+                    agent_name = agent_metadata.get("name", f"{agent_type}-{response['agent_id'][:8]}")
+
                     if not existing_agent:
                         # Create new agent
                         new_agent = Agent(
                             id=response["agent_id"],
-                            name=f"{response['agent_type']}-{response['agent_id'][:8]}",
-                            type="custom",  # Use 'custom' as the agent type
+                            name=agent_name,
+                            agent_type=agent_type,
                             status="active",
-                            version="1.0.0",  # Default version
-                            config={},  # Empty config
+                            version=agent_metadata.get("version", "1.0.0"),
+                            config=agent_metadata.get("config", {}),
+                            agent_metadata=agent_metadata,
+                            capabilities=agent_metadata.get("capabilities", []),
                             last_heartbeat=datetime.utcnow(),
                             created_at=datetime.utcnow(),
                             updated_at=datetime.utcnow(),
@@ -305,11 +395,13 @@ class AgentService:
                         await self.db.commit()
                         logger.info("Registered new agent: %s", response["agent_id"])
                     else:
-                        # Update existing agent's heartbeat
+                        # Update existing agent
                         existing_agent.last_heartbeat = datetime.utcnow()
                         existing_agent.status = "active"
+                        existing_agent.agent_metadata = agent_metadata
+                        existing_agent.updated_at = datetime.utcnow()
                         await self.db.commit()
-                        logger.info("Updated existing agent heartbeat: %s", response["agent_id"])
+                        logger.info("Updated existing agent: %s", response["agent_id"])
                 except Exception as e:
                     logger.error("Error registering agent %s: %s", response["agent_id"], e)
                     await self.db.rollback()
@@ -322,16 +414,12 @@ class AgentService:
             return [
                 AgentDiscovery(
                     name=agent.name,
-                    agent_type=agent.type,
-                    hostname=(
-                        agent.agent_metadata.get("hostname", "localhost") if agent.agent_metadata else "localhost"
-                    ),
-                    ip_address=(
-                        agent.agent_metadata.get("ip_address", "127.0.0.1") if agent.agent_metadata else "127.0.0.1"
-                    ),
-                    port=(agent.agent_metadata.get("port", 8080) if agent.agent_metadata else 8080),
-                    confidence=(agent.agent_metadata.get("confidence", 1.0) if agent.agent_metadata else 1.0),
-                    agent_metadata=agent.agent_metadata or {},
+                    agent_type=agent.agent_type,
+                    hostname=agent.agent_metadata.get("hostname", "localhost"),
+                    ip_address=agent.agent_metadata.get("ip_address", "127.0.0.1"),
+                    port=agent.agent_metadata.get("port", 8080),
+                    confidence=agent.agent_metadata.get("confidence", 1.0),
+                    agent_metadata=agent.agent_metadata or {}
                 )
                 for agent in agents
             ]

@@ -126,3 +126,93 @@ pytest tests/
 ## License
 
 This package is part of OPMAS and is subject to the same license terms.
+
+## Configuration
+
+The `.env` file is used to configure the agent. Here are the available configuration options:
+
+### Required Configuration
+
+#### Agent Identity
+- `AGENT_NAME`: Display name of the agent
+- `AGENT_TYPE`: Type of agent (e.g., security, network, system)
+- `AGENT_VERSION`: Version of the agent
+- `AGENT_DESCRIPTION`: Description of the agent's purpose
+
+#### Agent Configuration
+- `AGENT_ID`: Unique identifier (optional, will be auto-generated)
+- `AGENT_PORT`: Port for agent communication
+- `AGENT_HOST`: Host binding address
+- `AGENT_LOG_LEVEL`: Logging level (DEBUG, INFO, WARNING, ERROR)
+
+#### NATS Configuration
+- `NATS_URL`: NATS server URL
+- `NATS_USER`: NATS username
+- `NATS_PASSWORD`: NATS password
+- `NATS_TLS_VERIFY`: Enable TLS verification
+
+#### Agent Capabilities
+- `DEFAULT_SUBSCRIBED_TOPICS`: Comma-separated list of topics to subscribe to
+- `DEFAULT_FINDINGS_TOPIC`: Topic for publishing findings
+- `DEFAULT_METRICS_TOPIC`: Topic for publishing metrics
+
+### Optional Configuration
+
+#### Resource Limits
+- `MAX_MEMORY_MB`: Maximum memory usage in MB
+- `MAX_CPU_PERCENT`: Maximum CPU usage percentage
+- `MAX_DISK_MB`: Maximum disk usage in MB
+
+#### Security Settings
+- `TLS_ENABLED`: Enable TLS
+- `TLS_CERT_PATH`: Path to TLS certificate
+- `TLS_KEY_PATH`: Path to TLS key
+- `TLS_CA_PATH`: Path to TLS CA
+
+#### Monitoring Settings
+- `HEARTBEAT_INTERVAL_SECONDS`: Interval between heartbeats
+- `METRICS_INTERVAL_SECONDS`: Interval between metrics reports
+- `LOG_RETENTION_DAYS`: Number of days to retain logs
+
+## Usage
+
+1. Copy this directory to create a new agent:
+   ```bash
+   cp -r base_agent_package my_new_agent
+   ```
+
+2. Copy the example environment file:
+   ```bash
+   cp example.env .env
+   ```
+
+3. Edit the `.env` file with your agent's configuration
+
+4. Implement your agent logic in `agent.py`
+
+5. Add any required dependencies to `requirements.txt`
+
+## Development
+
+The agent package includes:
+
+- `agent.py`: Main agent implementation
+- `models.py`: Data models
+- `exceptions.py`: Custom exceptions
+- `requirements.txt`: Python dependencies
+- `example.env`: Example configuration
+- `README.md`: This documentation
+
+## Testing
+
+Add your tests to the `tests` directory:
+
+```bash
+mkdir tests
+touch tests/__init__.py
+touch tests/test_agent.py
+```
+
+## Deployment
+
+The agent can be deployed as a standalone process or in a container. See the deployment guide for more details.
