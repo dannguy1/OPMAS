@@ -40,6 +40,28 @@ class Settings(BaseSettings):
         description="Timeout for getting a connection from the pool"
     )
 
+    # Admin user settings
+    FIRST_SUPERUSER_ID: str = Field(
+        default="00000000-0000-0000-0000-000000000000",
+        description="ID of the first superuser"
+    )
+    FIRST_SUPERUSER_EMAIL: str = Field(
+        default="admin@opmas.example.com",
+        description="Email of the first superuser"
+    )
+    FIRST_SUPERUSER_USERNAME: str = Field(
+        default="admin",
+        description="Username of the first superuser"
+    )
+    FIRST_SUPERUSER_FULL_NAME: str = Field(
+        default="System Administrator",
+        description="Full name of the first superuser"
+    )
+    FIRST_SUPERUSER_PASSWORD: str = Field(
+        default="admin",
+        description="Password of the first superuser"
+    )
+
     # NATS settings
     NATS_URL: str = Field(
         default="nats://localhost:4222",

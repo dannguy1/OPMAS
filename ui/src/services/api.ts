@@ -117,7 +117,7 @@ export const dashboardApi = {
 // Findings API
 export const findingsApi = {
   getFindings: async (params?: { search?: string; severity?: string; status?: string; sort_by?: string; sort_direction?: string }) => {
-    const response = await apiClient.get<Finding[]>('/findings', { params });
+    const response = await apiClient.get<{ items: Finding[]; total: number; skip: number; limit: number }>('/findings', { params });
     return response.data;
   },
   getFinding: async (id: string) => {

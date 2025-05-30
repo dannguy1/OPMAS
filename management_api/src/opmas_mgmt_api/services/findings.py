@@ -1,8 +1,9 @@
 """Finding management service."""
 
-from typing import Any, Dict, List, Optional
-from uuid import UUID
 import logging
+from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
+from datetime import datetime
 
 from opmas_mgmt_api.core.exceptions import ResourceNotFoundError, ValidationError
 from opmas_mgmt_api.models.findings import Finding
@@ -12,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+
 class FindingService:
     """Service for managing findings."""
 
-    def __init__(self, db: AsyncSession, nats=None):
+    def __init__(self, db: AsyncSession, nats: Optional[Any] = None) -> None:
         """Initialize service."""
         self.db = db
         self.nats = nats
@@ -108,32 +110,46 @@ class FindingService:
             logger.error(f"Error listing findings: {str(e)}")
             raise ValidationError(f"Error listing findings: {str(e)}")
 
-    async def create_finding(self, finding: FindingCreate):
+    async def create_finding(self, finding: FindingCreate) -> Finding:
         """Create a new finding."""
-        db_finding = Finding(**finding.model_dump())
+        db_finding = Finding(
+            title=finding.title,
+            description=finding.description,
+            severity=finding.severity,
+            status=finding.status,
+            source=finding.source,
+            finding_metadata=finding.finding_metadata,
+            device_id=finding.device_id,
+            agent_id=finding.agent_id,
+            rule_id=finding.rule_id,
+            reporter_id=finding.reporter_id,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
         self.db.add(db_finding)
         await self.db.commit()
         await self.db.refresh(db_finding)
         return db_finding
 
-    async def get_finding(self, finding_id: UUID):
+    async def get_finding(self, finding_id: UUID) -> Finding:
         """Get finding by ID."""
         finding = await self.db.get(Finding, finding_id)
         if not finding:
             raise ResourceNotFoundError(f"Finding {finding_id} not found")
         return finding
 
-    async def update_finding(self, finding_id: UUID, finding: FindingUpdate):
+    async def update_finding(self, finding_id: UUID, finding: FindingUpdate) -> Finding:
         """Update a finding."""
         db_finding = await self.get_finding(finding_id)
         update_data = finding.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_finding, field, value)
+        db_finding.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(db_finding)
         return db_finding
 
-    async def delete_finding(self, finding_id: UUID):
+    async def delete_finding(self, finding_id: UUID) -> None:
         """Delete a finding."""
         finding = await self.get_finding(finding_id)
         await self.db.delete(finding)
