@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+import logging
 
 from opmas_mgmt_api.core.exceptions import ResourceNotFoundError, ValidationError
 from opmas_mgmt_api.models.findings import Finding
@@ -9,6 +10,7 @@ from opmas_mgmt_api.schemas.findings import FindingCreate, FindingResponse, Find
 from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
 
 class FindingService:
     """Service for managing findings."""
@@ -31,23 +33,8 @@ class FindingService:
     ) -> Dict[str, Any]:
         """List findings with optional filtering and sorting."""
         try:
-            # Build base query with only existing columns
-            query = select(
-                Finding.id,
-                Finding.title,
-                Finding.description,
-                Finding.severity,
-                Finding.status,
-                Finding.source,
-                Finding.finding_metadata,
-                Finding.created_at,
-                Finding.updated_at,
-                Finding.resolved_at,
-                Finding.device_id,
-                Finding.agent_id,
-                Finding.rule_id,
-                Finding.reporter_id,
-            )
+            # Build base query
+            query = select(Finding)
 
             # Add filters
             if severity:
@@ -88,20 +75,28 @@ class FindingService:
             # Convert to response models
             items = []
             for finding in findings:
-                finding_dict = {
-                    "id": finding.id,
-                    "title": finding.title,
-                    "description": finding.description,
-                    "severity": finding.severity,
-                    "status": finding.status,
-                    "source": finding.source,
-                    "device_id": finding.device_id,
-                    "finding_metadata": finding.finding_metadata,
-                    "created_at": finding.created_at,
-                    "updated_at": finding.updated_at,
-                    "resolved_at": finding.resolved_at,
-                }
-                items.append(FindingResponse(**finding_dict))
+                try:
+                    finding_dict = {
+                        "id": finding.id,
+                        "title": finding.title,
+                        "description": finding.description,
+                        "severity": finding.severity,
+                        "status": finding.status,
+                        "source": finding.source,
+                        "device_id": finding.device_id,
+                        "agent_id": finding.agent_id,
+                        "rule_id": finding.rule_id,
+                        "reporter_id": finding.reporter_id,
+                        "finding_metadata": finding.finding_metadata or {},
+                        "created_at": finding.created_at,
+                        "updated_at": finding.updated_at,
+                        "resolved_at": finding.resolved_at,
+                    }
+                    items.append(FindingResponse(**finding_dict))
+                except Exception as e:
+                    logger.error(f"Error converting finding to response model: {str(e)}")
+                    logger.error(f"Finding data: {finding.__dict__}")
+                    continue
 
             return {
                 "items": items,
@@ -110,6 +105,7 @@ class FindingService:
                 "limit": limit,
             }
         except Exception as e:
+            logger.error(f"Error listing findings: {str(e)}")
             raise ValidationError(f"Error listing findings: {str(e)}")
 
     async def create_finding(self, finding: FindingCreate):

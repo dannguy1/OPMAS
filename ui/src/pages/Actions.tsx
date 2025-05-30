@@ -46,21 +46,14 @@ export const Actions: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const [isNewActionModalOpen, setIsNewActionModalOpen] = useState(false);
 
-  const { data: actions, isLoading } = useQuery({
-    queryKey: ['actions', searchTerm, selectedPriority, selectedStatus, sortField, sortDirection],
-    queryFn: () => actionsApi.get('/actions', {
-      params: {
-        search: searchTerm || undefined,
-        priority: selectedPriority || undefined,
-        status: selectedStatus || undefined,
-        sort_by: sortField === 'dueDate' ? 'due_date' :
-                sortField === 'createdAt' ? 'created_at' :
-                sortField === 'updatedAt' ? 'updated_at' :
-                sortField === 'findingId' ? 'finding_id' :
-                sortField === 'assignedTo' ? 'assigned_to' :
-                sortField === 'completedAt' ? 'completed_at' : sortField,
-        sort_direction: sortDirection
-      }
+  const { data: actionsData, isLoading } = useQuery<ActionsResponse>({
+    queryKey: ['actions', searchTerm, sortField, sortDirection],
+    queryFn: () => actionsApi.getActions({
+      search: searchTerm,
+      sort_by: sortField === 'dueDate' ? 'due_date' :
+              sortField === 'createdAt' ? 'created_at' :
+              sortField === 'updatedAt' ? 'updated_at' : sortField,
+      sort_direction: sortDirection,
     })
   });
 
@@ -211,14 +204,14 @@ export const Actions: React.FC = () => {
                         Loading...
                       </td>
                     </tr>
-                  ) : actions?.length === 0 ? (
+                  ) : actionsData?.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
                         No actions found
                       </td>
                     </tr>
                   ) : (
-                    actions?.map((action: Action) => (
+                    actionsData?.map((action: Action) => (
                       <tr
                         key={action.id}
                         className="hover:bg-gray-50 cursor-pointer"

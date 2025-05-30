@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { User, Finding, Action, DashboardStats, RecentActivity } from '../types';
 
 // API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.10.8:8000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://192.168.10.8:8000') + '/api/v1';
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Error types
@@ -82,7 +82,7 @@ export const authApi = {
     formData.append('password', password);
 
     const response = await apiClient.post<{ access_token: string; token_type: string }>(
-      '/api/v1/auth/login',
+      '/auth/login',
       formData,
       {
         headers: {
@@ -93,11 +93,11 @@ export const authApi = {
     return response.data;
   },
   getCurrentUser: async () => {
-    const response = await apiClient.get<User>('/api/v1/auth/me');
+    const response = await apiClient.get<User>('/auth/me');
     return response.data;
   },
   logout: async () => {
-    const response = await apiClient.post('/api/v1/auth/logout');
+    const response = await apiClient.post('/auth/logout');
     return response.data;
   },
 };
@@ -105,143 +105,167 @@ export const authApi = {
 // Dashboard API
 export const dashboardApi = {
   getStats: async () => {
-    const response = await apiClient.get<DashboardStats>('/api/v1/dashboard/stats');
+    const response = await apiClient.get<DashboardStats>('/dashboard/stats');
     return response.data;
   },
   getRecentActivity: async () => {
-    const response = await apiClient.get<RecentActivity[]>('/api/v1/dashboard/activity/recent');
+    const response = await apiClient.get<RecentActivity[]>('/dashboard/activity/recent');
     return response.data;
   },
 };
 
 // Findings API
 export const findingsApi = {
-  getFindings: async () => {
-    const response = await apiClient.get<Finding[]>('/api/v1/findings');
+  getFindings: async (params?: { search?: string; severity?: string; status?: string; sort_by?: string; sort_direction?: string }) => {
+    const response = await apiClient.get<Finding[]>('/findings', { params });
     return response.data;
   },
   getFinding: async (id: string) => {
-    const response = await apiClient.get<Finding>(`/api/v1/findings/${id}`);
+    const response = await apiClient.get<Finding>(`/findings/${id}`);
     return response.data;
   },
   createFinding: async (finding: Omit<Finding, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const response = await apiClient.post<Finding>('/api/v1/findings', finding);
+    const response = await apiClient.post<Finding>('/findings', finding);
     return response.data;
   },
   updateFinding: async (id: string, finding: Partial<Finding>) => {
-    const response = await apiClient.put<Finding>(`/api/v1/findings/${id}`, finding);
+    const response = await apiClient.put<Finding>(`/findings/${id}`, finding);
     return response.data;
   },
   deleteFinding: async (id: string) => {
-    await apiClient.delete(`/api/v1/findings/${id}`);
+    await apiClient.delete(`/findings/${id}`);
+  },
+};
+
+// Agents API
+export const agentsApi = {
+  getAgents: async (params?: { search?: string; sort_by?: string; sort_direction?: string }) => {
+    const response = await apiClient.get('/agents/', { params });
+    return response.data;
+  },
+  getAgent: async (id: string) => {
+    const response = await apiClient.get(`/agents/${id}`);
+    return response.data;
+  },
+  discoverAgents: async () => {
+    const response = await apiClient.post('/agents/discover');
+    return response.data;
   },
 };
 
 // System API
 export const systemApi = {
-  get: async (path: string, config?: any) => {
-    const response = await apiClient.get(`/api/v1${path}`, config);
+  getStatus: async () => {
+    const response = await apiClient.get('/system/status');
     return response.data;
   },
-  post: async (path: string, data: any) => {
-    const response = await apiClient.post(`/api/v1${path}`, data);
+  getConfig: async () => {
+    const response = await apiClient.get('/system/config');
+    return response.data;
+  },
+  updateConfig: async (config: any) => {
+    const response = await apiClient.put('/system/config', config);
     return response.data;
   },
 };
 
 // Actions API
 export const actionsApi = {
-  get: async (path: string, config?: any) => {
-    const response = await apiClient.get(`/api/v1${path}`, config);
+  getActions: async (params?: { search?: string; sort_by?: string; sort_direction?: string }) => {
+    const response = await apiClient.get('/actions', { params });
     return response.data;
   },
-  post: async (path: string, data: any) => {
-    const response = await apiClient.post(`/api/v1${path}`, data);
+  getAction: async (id: string) => {
+    const response = await apiClient.get(`/actions/${id}`);
     return response.data;
   },
-  patch: async (path: string, data: any) => {
-    const response = await apiClient.patch(`/api/v1${path}`, data);
+  createAction: async (action: any) => {
+    const response = await apiClient.post('/actions', action);
     return response.data;
   },
-  delete: async (path: string) => {
-    await apiClient.delete(`/api/v1${path}`);
+  updateAction: async (id: string, action: any) => {
+    const response = await apiClient.put(`/actions/${id}`, action);
+    return response.data;
+  },
+  deleteAction: async (id: string) => {
+    await apiClient.delete(`/actions/${id}`);
   },
 };
 
 // Playbooks API
 export const playbooksApi = {
   getPlaybooks: async () => {
-    const response = await apiClient.get('/api/v1/playbooks');
+    const response = await apiClient.get('/playbooks');
     return response.data;
   },
   getPlaybook: async (id: string) => {
-    const response = await apiClient.get(`/api/v1/playbooks/${id}`);
+    const response = await apiClient.get(`/playbooks/${id}`);
     return response.data;
   },
   createPlaybook: async (playbook: { name: string; agent_type: string; description?: string }) => {
-    const response = await apiClient.post('/api/v1/playbooks', playbook);
+    const response = await apiClient.post('/playbooks', playbook);
     return response.data;
   },
   updatePlaybook: async (id: string, playbook: { name: string; agent_type: string; description?: string }) => {
-    const response = await apiClient.put(`/api/v1/playbooks/${id}`, playbook);
+    const response = await apiClient.put(`/playbooks/${id}`, playbook);
     return response.data;
   },
   deletePlaybook: async (id: string) => {
-    await apiClient.delete(`/api/v1/playbooks/${id}`);
+    await apiClient.delete(`/playbooks/${id}`);
   },
   getPlaybookStatus: async (id: string) => {
-    const response = await apiClient.get(`/api/v1/playbooks/${id}/status`);
+    const response = await apiClient.get(`/playbooks/${id}/status`);
     return response.data;
   },
   executePlaybook: async (id: string, metadata?: any) => {
-    const response = await apiClient.post(`/api/v1/playbooks/${id}/execute`, metadata);
+    const response = await apiClient.post(`/playbooks/${id}/execute`, metadata);
     return response.data;
   },
   // Playbook Steps
   getPlaybookSteps: async (playbookId: string) => {
-    const response = await apiClient.get(`/api/v1/playbooks/${playbookId}/steps`);
+    const response = await apiClient.get(`/playbooks/${playbookId}/steps`);
     return response.data;
   },
   createPlaybookStep: async (playbookId: string, step: { action_type: string; description?: string; command_template?: string }) => {
-    const response = await apiClient.post(`/api/v1/playbooks/${playbookId}/steps`, step);
+    const response = await apiClient.post(`/playbooks/${playbookId}/steps`, step);
     return response.data;
   },
   updatePlaybookStep: async (playbookId: string, stepId: string, step: { action_type: string; description?: string; command_template?: string }) => {
-    const response = await apiClient.put(`/api/v1/playbooks/${playbookId}/steps/${stepId}`, step);
+    const response = await apiClient.put(`/playbooks/${playbookId}/steps/${stepId}`, step);
     return response.data;
   },
   deletePlaybookStep: async (playbookId: string, stepId: string) => {
-    await apiClient.delete(`/api/v1/playbooks/${playbookId}/steps/${stepId}`);
+    await apiClient.delete(`/playbooks/${playbookId}/steps/${stepId}`);
   },
 };
 
 // Rules API
 export const rulesApi = {
   getRules: async (params?: { search?: string; sort_by?: string; sort_direction?: string }) => {
-    const response = await apiClient.get('/api/v1/rules', { params });
+    const response = await apiClient.get('/rules', { params });
     return response.data;
   },
   getRule: async (id: string) => {
-    const response = await apiClient.get(`/api/v1/rules/${id}`);
+    const response = await apiClient.get(`/rules/${id}`);
     return response.data;
   },
   createRule: async (rule: { name: string; agent_type: string; description?: string }) => {
-    const response = await apiClient.post('/api/v1/rules', rule);
+    const response = await apiClient.post('/rules', rule);
     return response.data;
   },
   updateRule: async (id: string, rule: { name: string; agent_type: string; description?: string }) => {
-    const response = await apiClient.put(`/api/v1/rules/${id}`, rule);
+    const response = await apiClient.put(`/rules/${id}`, rule);
     return response.data;
   },
   deleteRule: async (id: string) => {
-    await apiClient.delete(`/api/v1/rules/${id}`);
+    await apiClient.delete(`/rules/${id}`);
   },
   getRuleStatus: async (id: string) => {
-    const response = await apiClient.get(`/api/v1/rules/${id}/status`);
+    const response = await apiClient.get(`/rules/${id}/status`);
     return response.data;
   },
   updateRuleStatus: async (id: string, status: string, error?: string) => {
-    const response = await apiClient.post(`/api/v1/rules/${id}/status`, { status, error });
+    const response = await apiClient.post(`/rules/${id}/status`, { status, error });
     return response.data;
   },
 };

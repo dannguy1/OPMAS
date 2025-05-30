@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class Token(BaseModel):
@@ -24,7 +24,7 @@ class UserBase(BaseModel):
     """Base user model."""
 
     username: str = Field(..., min_length=3, max_length=50)
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     full_name: Optional[str] = None
     is_active: bool = True
     is_superuser: bool = False
@@ -39,7 +39,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """User update model."""
 
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     full_name: Optional[str] = None
     password: Optional[str] = Field(None, min_length=8)
 

@@ -51,17 +51,15 @@ export const Findings: React.FC = () => {
 
   const { data: findingsData, isLoading } = useQuery<FindingsResponse>({
     queryKey: ['findings', searchTerm, selectedSeverity, selectedStatus, sortField, sortDirection],
-    queryFn: () => findingsApi.get('/findings', {
-      params: {
-        search: searchTerm || undefined,
-        severity: selectedSeverity || undefined,
-        status: selectedStatus || undefined,
-        sort_by: sortField === 'createdAt' ? 'created_at' :
-                sortField === 'updatedAt' ? 'updated_at' :
-                sortField === 'deviceId' ? 'device_id' : sortField,
-        sort_direction: sortDirection
-      }
-    }).then(res => res.data)
+    queryFn: () => findingsApi.getFindings({
+      search: searchTerm || undefined,
+      severity: selectedSeverity || undefined,
+      status: selectedStatus || undefined,
+      sort_by: sortField === 'createdAt' ? 'created_at' :
+              sortField === 'updatedAt' ? 'updated_at' :
+              sortField === 'deviceId' ? 'device_id' : sortField,
+      sort_direction: sortDirection
+    })
   });
 
   const handleSort = (field: keyof Finding) => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { systemApi } from '../services/api';
+import { agentsApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -10,19 +10,24 @@ import {
 interface Agent {
   id: string;
   name: string;
-  type: string;
-  status: 'running' | 'stopped' | 'error';
+  agent_type: string;
+  status: string;
   description: string;
   created_at: string;
   updated_at: string;
-  last_heartbeat: string;
+  last_seen: string;
+  hostname: string;
+  ip_address: string;
+  port: number;
+  enabled: boolean;
 }
 
 interface AgentsResponse {
-  items: Agent[];
+  agents: Agent[];
   total: number;
-  skip: number;
-  limit: number;
+  page: number;
+  size: number;
+  pages: number;
 }
 
 export const Agents: React.FC = () => {
@@ -33,15 +38,13 @@ export const Agents: React.FC = () => {
 
   const { data: agentsData, isLoading } = useQuery<AgentsResponse>({
     queryKey: ['agents', searchTerm, sortField, sortDirection],
-    queryFn: () => systemApi.get('/agents', {
-      params: {
-        search: searchTerm,
-        sort_by: sortField === 'lastHeartbeat' ? 'last_heartbeat' :
-                sortField === 'createdAt' ? 'created_at' :
-                sortField === 'updatedAt' ? 'updated_at' : sortField,
-        sort_direction: sortDirection,
-      }
-    }).then(res => res.data)
+    queryFn: () => agentsApi.getAgents({
+      search: searchTerm,
+      sort_by: sortField === 'last_seen' ? 'last_seen' :
+              sortField === 'created_at' ? 'created_at' :
+              sortField === 'updated_at' ? 'updated_at' : sortField,
+      sort_direction: sortDirection,
+    })
   });
 
   const handleSort = (field: keyof Agent) => {
@@ -63,15 +66,18 @@ export const Agents: React.FC = () => {
   };
 
   const statusColors = {
-    running: 'bg-green-100 text-green-800',
-    stopped: 'bg-red-100 text-red-800',
+    online: 'bg-green-100 text-green-800',
+    offline: 'bg-red-100 text-red-800',
     error: 'bg-yellow-100 text-yellow-800',
+    unknown: 'bg-gray-100 text-gray-800',
+    maintenance: 'bg-blue-100 text-blue-800',
+    active: 'bg-green-100 text-green-800',
   };
 
   const fetchDiscoveredAgents = async () => {
     setDiscovering(true);
     try {
-      await systemApi.post('/agents/discover');
+      await agentsApi.discoverAgents();
     } catch (error) {
       console.error('Error discovering new agents:', error);
     } finally {
@@ -134,11 +140,11 @@ export const Agents: React.FC = () => {
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('type')}
+                      onClick={() => handleSort('agent_type')}
                     >
                       <div className="flex items-center gap-1">
                         Type
-                        <SortIcon field="type" />
+                        <SortIcon field="agent_type" />
                       </div>
                     </th>
                     <th
@@ -154,18 +160,24 @@ export const Agents: React.FC = () => {
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 cursor-pointer"
-                      onClick={() => handleSort('last_heartbeat')}
+                      onClick={() => handleSort('last_seen')}
                     >
                       <div className="flex items-center gap-1">
-                        Last Heartbeat
-                        <SortIcon field="last_heartbeat" />
+                        Last Seen
+                        <SortIcon field="last_seen" />
                       </div>
                     </th>
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                     >
-                      Description
+                      Hostname
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      IP Address
                     </th>
                     <th
                       scope="col"
@@ -178,39 +190,42 @@ export const Agents: React.FC = () => {
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
+                      <td colSpan={7} className="py-4 text-center text-sm text-gray-500">
                         Loading...
                       </td>
                     </tr>
-                  ) : agentsData?.items.length === 0 ? (
+                  ) : !agentsData?.agents || agentsData.agents.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-4 text-center text-sm text-gray-500">
+                      <td colSpan={7} className="py-4 text-center text-sm text-gray-500">
                         No agents found
                       </td>
                     </tr>
                   ) : (
-                    agentsData?.items.map((agent) => (
+                    agentsData.agents.map((agent) => (
                       <tr key={agent.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           {agent.name}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {agent.type}
+                          {agent.agent_type}
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm">
                           <span
                             className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                              statusColors[agent.status]
+                              statusColors[agent.status] || statusColors.unknown
                             }`}
                           >
                             {agent.status}
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {new Date(agent.last_heartbeat).toLocaleString()}
+                          {agent.last_seen ? new Date(agent.last_seen).toLocaleString() : 'Never'}
                         </td>
-                        <td className="px-3 py-4 text-sm text-gray-500">
-                          {agent.description}
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {agent.hostname}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                          {agent.ip_address}:{agent.port}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium space-x-1">
                           <button
