@@ -28,9 +28,14 @@ class Device(Base):
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     last_seen: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
+    # Foreign keys
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+
     # Relationships
+    owner = relationship("User", back_populates="devices")
     agents = relationship("Agent", back_populates="device")
     status_history = relationship("DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan")
+    findings = relationship("Finding", back_populates="device", cascade="all, delete-orphan")
 
 
 class DeviceStatusHistory(Base):

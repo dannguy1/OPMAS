@@ -30,9 +30,11 @@ class Finding(Base):
     device_id: Mapped[UUID] = mapped_column(ForeignKey("devices.id"), nullable=False)
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     rule_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("rules.id"), nullable=True)
+    reporter_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     # Relationships
     device = relationship("Device", back_populates="findings")
     agent = relationship("Agent", back_populates="findings")
     rule = relationship("Rule", back_populates="findings")
+    reporter = relationship("User", back_populates="findings")
     actions = relationship("Action", back_populates="finding", cascade="all, delete-orphan")

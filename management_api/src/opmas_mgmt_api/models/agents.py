@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 from opmas_mgmt_api.db.base_class import Base
 from opmas_mgmt_api.models.findings import Finding
-from sqlalchemy import JSON, Enum, ForeignKey, String, text
+from sqlalchemy import JSON, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -32,14 +32,11 @@ class Agent(Base):
     # Relationships
     device = relationship("Device", back_populates="agents")
     owner = relationship("User", back_populates="agents")
-    rules = relationship("Rule", back_populates="agent")
+    rules = relationship("Rule", back_populates="agent", cascade="all, delete-orphan")
+    agent_rules = relationship("AgentRule", back_populates="agent", cascade="all, delete-orphan")
     playbooks = relationship("Playbook", back_populates="agent")
-    findings: Mapped[List[Finding]] = relationship(
-        "Finding", back_populates="agent", foreign_keys=[Finding.agent_id]
-    )
-    metrics: Mapped[List["Metric"]] = relationship(
-        "Metric", back_populates="agent", cascade="all, delete-orphan"
-    )
+    findings: Mapped[List[Finding]] = relationship("Finding", back_populates="agent", foreign_keys=[Finding.agent_id])
+    metrics: Mapped[List["Metric"]] = relationship("Metric", back_populates="agent", cascade="all, delete-orphan")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert model to dictionary."""
@@ -63,9 +60,7 @@ class Metric(Base):
     __tablename__ = "metrics"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    agent_id: Mapped[UUID] = mapped_column(
-        ForeignKey("agents.id", ondelete="CASCADE"), nullable=False
-    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     metrics: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
 
@@ -98,4 +93,4 @@ class AgentRule(Base):
     enabled: Mapped[bool] = mapped_column(default=True)
 
     # Relationships
-    agent = relationship("Agent", back_populates="rules")
+    agent = relationship("Agent", back_populates="agent_rules")

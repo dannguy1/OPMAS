@@ -1,7 +1,7 @@
 """Rule management models."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from uuid import UUID, uuid4
 
 from opmas_mgmt_api.db.base_class import Base
@@ -27,9 +27,11 @@ class Rule(Base):
 
     # Foreign keys
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     # Relationships
     agent = relationship("Agent", back_populates="rules")
+    owner = relationship("User", back_populates="rules")
     findings = relationship("Finding", back_populates="rule")
 
     def to_dict(self) -> Dict[str, Any]:
