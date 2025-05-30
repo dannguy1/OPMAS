@@ -9,10 +9,9 @@ from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.models.playbooks import Playbook, PlaybookExecution
 from opmas_mgmt_api.schemas.playbooks import PlaybookCreate
 from opmas_mgmt_api.schemas.playbooks import PlaybookExecution as PlaybookExecutionSchema
-from opmas_mgmt_api.schemas.playbooks import PlaybookStatus, PlaybookUpdate
-from sqlalchemy import delete, func, select, update
+from opmas_mgmt_api.schemas.playbooks import PlaybookResponse, PlaybookStatus, PlaybookUpdate
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 
 class PlaybookService:
@@ -44,7 +43,6 @@ class PlaybookService:
             Playbook.updated_at,
             Playbook.last_executed,
             Playbook.execution_count,
-            Playbook.owner_id,
         )
 
         # Apply filters
@@ -63,10 +61,28 @@ class PlaybookService:
         # Get paginated results
         query = base_query.offset(skip).limit(limit)
         result = await self.db.execute(query)
-        playbooks = result.scalars().all()
+        playbooks = result.all()  # result.all() returns list of Row objects
+
+        # Convert to PlaybookResponse models
+        items = [
+            PlaybookResponse(
+                id=row.id,
+                name=row.name,
+                description=row.description,
+                agent_type=row.agent_type,
+                enabled=row.enabled,
+                steps=row.steps,
+                playbook_metadata=row.playbook_metadata,
+                created_at=row.created_at,
+                updated_at=row.updated_at,
+                last_executed=row.last_executed,
+                execution_count=row.execution_count,
+            )
+            for row in playbooks
+        ]
 
         return {
-            "items": playbooks,
+            "items": items,
             "total": total,
             "skip": skip,
             "limit": limit,
