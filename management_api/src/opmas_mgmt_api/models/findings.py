@@ -35,3 +35,4 @@ class Finding(Base):
     device = relationship("Device", back_populates="findings")
     agent = relationship("Agent", back_populates="findings")
     rule = relationship("Rule", back_populates="findings")
+    actions = relationship("Action", back_populates="finding", cascade="all, delete-orphan")
