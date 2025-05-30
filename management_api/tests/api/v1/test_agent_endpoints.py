@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from opmas_mgmt_api.models.agent import Agent, AgentRule
+from opmas_mgmt_api.models.agents import Agent, AgentRule
 from opmas_mgmt_api.schemas.agent import AgentCreate, AgentRuleCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -19,7 +19,7 @@ from opmas_mgmt_api.schemas.agents import (
     AgentStatus,
     AgentUpdate,
 )
-from opmas_mgmt_api.services.agents import AgentService
+from opmas_mgmt_api.agents.agent import AgentService
 from sqlalchemy.ext.asyncio import AsyncSession
 from opmas_mgmt_api.core.nats import nats_manager
 
@@ -35,6 +35,7 @@ async def list_agents(
     agent_type: Optional[str] = Query(None, description="Filter by agent type"),
     status: Optional[str] = Query(None, description="Filter by status"),
     enabled: Optional[bool] = Query(None, description="Filter by enabled status"),
+    device_id: Optional[UUID] = Query(None, description="Filter by device ID"),
     db: AsyncSession = Depends(get_db),
     nats=Depends(get_nats),
 ) -> AgentList:
@@ -46,6 +47,7 @@ async def list_agents(
         agent_type=agent_type,
         status=status,
         enabled=enabled,
+        device_id=device_id,
     )
 
 
@@ -67,10 +69,10 @@ async def get_agent(
 ) -> AgentResponse:
     """Get agent by ID."""
     service = AgentService(db, nats)
-    try:
-        return await service.get_agent(agent_id)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    agent = await service.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+    return agent
 
 
 @route.put("/{agent_id}", response_model=AgentResponse)
@@ -82,12 +84,10 @@ async def update_agent(
 ) -> AgentResponse:
     """Update an agent."""
     service = AgentService(db, nats)
-    try:
-        return await service.update_agent(agent_id, agent)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    updated_agent = await service.update_agent(agent_id, agent)
+    if not updated_agent:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+    return updated_agent
 
 
 @route.delete("/{agent_id}")
@@ -96,10 +96,8 @@ async def delete_agent(
 ) -> None:
     """Delete an agent."""
     service = AgentService(db, nats)
-    try:
-        await service.delete_agent(agent_id)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    if not await service.delete_agent(agent_id):
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
 
 
 @route.get("/{agent_id}/status", response_model=AgentStatus)
@@ -108,59 +106,25 @@ async def get_agent_status(
 ) -> AgentStatus:
     """Get agent status."""
     service = AgentService(db, nats)
-    try:
-        return await service.get_agent_status(agent_id)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    status = await service.get_agent_status(agent_id)
+    if not status:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+    return status
 
 
 @route.post("/{agent_id}/status", response_model=AgentStatus)
 async def update_agent_status(
     agent_id: UUID,
-    status: str = Body(...),
-    details: Optional[Dict[str, Any]] = Body(None),
+    status: AgentStatus,
     db: AsyncSession = Depends(get_db),
     nats=Depends(get_nats),
 ) -> AgentStatus:
     """Update agent status."""
     service = AgentService(db, nats)
-    try:
-        return await service.update_agent_status(agent_id, status, details)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@route.get("/{agent_id}/config", response_model=AgentConfig)
-async def get_agent_config(
-    agent_id: UUID, db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> AgentConfig:
-    """Get agent configuration."""
-    service = AgentService(db, nats)
-    try:
-        return await service.get_agent_config(agent_id)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@route.put("/{agent_id}/config", response_model=AgentConfig)
-async def update_agent_config(
-    agent_id: UUID,
-    config: Dict[str, Any] = Body(...),
-    version: str = Body(...),
-    metadata: Optional[Dict[str, Any]] = Body(None),
-    db: AsyncSession = Depends(get_db),
-    nats=Depends(get_nats),
-) -> AgentConfig:
-    """Update agent configuration."""
-    service = AgentService(db, nats)
-    try:
-        return await service.update_agent_config(agent_id, config, version, metadata)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    updated_status = await service.update_agent_status(agent_id, status)
+    if not updated_status:
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+    return updated_status
 
 
 @route.post("/discover", response_model=List[AgentDiscovery])

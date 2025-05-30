@@ -174,3 +174,43 @@ class AgentList(BaseModel):
         """Pydantic config."""
 
         from_attributes = True
+
+
+class AgentRuleBase(BaseModel):
+    """Base agent rule schema."""
+
+    name: str = Field(..., description="Rule name")
+    description: Optional[str] = Field(None, description="Rule description")
+    condition: Dict[str, Any] = Field(..., description="Rule condition")
+    action: Dict[str, Any] = Field(..., description="Rule action")
+    priority: int = Field(default=0, description="Rule priority")
+    enabled: bool = Field(default=True, description="Whether the rule is enabled")
+
+
+class AgentRuleCreate(AgentRuleBase):
+    """Agent rule creation schema."""
+
+    pass
+
+
+class AgentRuleUpdate(BaseModel):
+    """Agent rule update schema."""
+
+    name: Optional[str] = Field(None, description="Rule name")
+    description: Optional[str] = Field(None, description="Rule description")
+    condition: Optional[Dict[str, Any]] = Field(None, description="Rule condition")
+    action: Optional[Dict[str, Any]] = Field(None, description="Rule action")
+    priority: Optional[int] = Field(None, description="Rule priority")
+    enabled: Optional[bool] = Field(None, description="Whether the rule is enabled")
+    
+
+class AgentRuleResponse(AgentRuleBase):
+    """Agent rule response schema."""
+
+    id: UUID = Field(..., description="Rule ID")
+    agent_id: UUID = Field(..., description="Associated agent ID")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+    class Config:
+        from_attributes = True

@@ -4,16 +4,17 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from opmas_mgmt_api.api import deps
-from opmas_mgmt_api.schemas.agent import (
-    Agent,
+from opmas_mgmt_api.schemas.agents import (
     AgentCreate,
     AgentDiscovery,
-    AgentRule,
+    AgentList,
+    AgentResponse,
     AgentRuleCreate,
+    AgentRuleResponse,
     AgentRuleUpdate,
     AgentUpdate,
 )
-from opmas_mgmt_api.services.agent import AgentService
+from opmas_mgmt_api.services.agents import AgentService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
