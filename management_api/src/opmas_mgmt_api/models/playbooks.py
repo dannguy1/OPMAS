@@ -34,17 +34,13 @@ class Playbook(Base):
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
     steps: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     enabled: Mapped[bool] = mapped_column(default=True)
-    extra_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    playbook_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     last_executed: Mapped[Optional[datetime]] = mapped_column(nullable=True)
     execution_count: Mapped[int] = mapped_column(default=0)
-    owner_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
-    agent_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("agents.id"), nullable=True)
 
     # Relationships
-    owner = relationship("User", back_populates="playbooks")
-    agent = relationship("Agent", back_populates="playbooks")
     executions = relationship("PlaybookExecution", back_populates="playbook", cascade="all, delete-orphan")
 
 

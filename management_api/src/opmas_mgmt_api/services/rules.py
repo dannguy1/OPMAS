@@ -1,16 +1,15 @@
 """Rule management service."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from opmas_mgmt_api.core.exceptions import ResourceNotFoundError, ValidationError
 from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.models.rules import Rule
 from opmas_mgmt_api.schemas.rules import RuleCreate, RuleStatus, RuleUpdate
-from sqlalchemy import delete, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 
 class RuleService:
@@ -45,7 +44,6 @@ class RuleService:
             Rule.updated_at,
             Rule.last_triggered,
             Rule.trigger_count,
-            Rule.owner_id,
         )
 
         # Apply search filter

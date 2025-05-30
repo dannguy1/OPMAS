@@ -35,7 +35,6 @@ class Agent(Base):
     owner = relationship("User", back_populates="agents")
     rules = relationship("Rule", back_populates="agent", cascade="all, delete-orphan")
     agent_rules = relationship("AgentRule", back_populates="agent", cascade="all, delete-orphan")
-    playbooks = relationship("Playbook", back_populates="agent")
     findings: Mapped[List[Finding]] = relationship("Finding", back_populates="agent", foreign_keys=[Finding.agent_id])
     metrics: Mapped[List["Metric"]] = relationship("Metric", back_populates="agent", cascade="all, delete-orphan")
 

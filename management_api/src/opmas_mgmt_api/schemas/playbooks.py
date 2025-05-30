@@ -30,7 +30,7 @@ class PlaybookBase(BaseModel):
     agent_type: str = Field(..., description="Type of agent this playbook applies to")
     steps: List[PlaybookStep] = Field(..., description="List of playbook steps")
     enabled: bool = Field(default=True, description="Whether the playbook is enabled")
-    extra_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional playbook metadata")
+    playbook_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional playbook metadata")
 
 
 class PlaybookCreate(PlaybookBase):
@@ -46,7 +46,7 @@ class PlaybookUpdate(BaseModel):
     description: Optional[str] = Field(None, description="Playbook description")
     steps: Optional[List[PlaybookStep]] = Field(None, description="List of playbook steps")
     enabled: Optional[bool] = Field(None, description="Whether the playbook is enabled")
-    extra_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional playbook metadata")
+    playbook_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional playbook metadata")
 
 
 class PlaybookResponse(PlaybookBase):

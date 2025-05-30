@@ -1,17 +1,3 @@
 """API v1 package."""
 
-from fastapi import APIRouter
-
-router = APIRouter()
-
-# Import routers from endpoints
-from .endpoints import agents, configurations, devices, logs, playbooks, rules, system
-
-# Include all routers
-router.include_router(devices.router, prefix="/devices", tags=["Devices"])
-router.include_router(agents.router, prefix="/agents", tags=["Agents"])
-router.include_router(rules.router, prefix="/rules", tags=["Rules"])
-router.include_router(playbooks.router, prefix="/playbooks", tags=["Playbooks"])
-router.include_router(system.router, prefix="/system", tags=["System"])
-router.include_router(logs.router, prefix="/logs", tags=["Logs"])
-router.include_router(configurations.router, prefix="/config", tags=["Configuration"])
+# This file is intentionally empty as the router is defined in api.py
