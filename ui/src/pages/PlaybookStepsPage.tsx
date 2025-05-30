@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import apiClient from '../api/apiClient';
+import { playbooksApi } from '../services/api';
 import toast from 'react-hot-toast';
 import AddPlaybookStepModal from '../components/AddPlaybookStepModal';
 import EditPlaybookStepModal from '../components/EditPlaybookStepModal';
@@ -15,11 +15,17 @@ export interface PlaybookStep {
 }
 
 interface Playbook {
-  playbook_id: number;
-  finding_type: string;
+  id: string;
   name: string;
+  agent_type: string;
   description?: string;
   steps: PlaybookStep[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  last_executed?: string;
+  execution_count: number;
+  owner_id?: string;
 }
 // ----------------------------------------
 
@@ -43,8 +49,8 @@ const PlaybookStepsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get<Playbook>(`/playbooks/${playbookId}`);
-        setPlaybook(response.data);
+        const response = await playbooksApi.getPlaybook(playbookId);
+        setPlaybook(response);
       } catch (err: any) {
         console.error("Failed to fetch playbook details:", err);
         if (err.response && err.response.status === 404) {
@@ -71,9 +77,8 @@ const PlaybookStepsPage: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete step ID ${stepIdToDelete}? This cannot be undone.`)) {
         try {
             setError(null);
-
-            await apiClient.delete(`/playbooks/${playbook.playbook_id}/steps/${stepIdToDelete}`);
-            console.info(`Successfully deleted step ${stepIdToDelete} from playbook ${playbook.playbook_id}`);
+            await playbooksApi.deletePlaybookStep(playbook.id, stepIdToDelete.toString());
+            console.info(`Successfully deleted step ${stepIdToDelete} from playbook ${playbook.id}`);
 
             setPlaybook(currentPlaybook => {
                 if (!currentPlaybook) return null;
@@ -113,9 +118,7 @@ const PlaybookStepsPage: React.FC = () => {
     if (!playbook) return;
     setError(null);
     try {
-      const response = await apiClient.post<PlaybookStep>(`/playbooks/${playbook.playbook_id}/steps`, newStepData);
-      const createdStep = response.data;
-
+      const createdStep = await playbooksApi.createPlaybookStep(playbook.id, newStepData);
       setPlaybook(currentPlaybook => {
         if (!currentPlaybook) return null;
         return {
@@ -127,7 +130,7 @@ const PlaybookStepsPage: React.FC = () => {
       setIsAddStepModalOpen(false);
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Failed to add step.';
-      console.error(`Failed to add step to playbook ${playbook.playbook_id}:`, err);
+      console.error(`Failed to add step to playbook ${playbook.id}:`, err);
       toast.error(errorMsg);
       throw new Error(errorMsg);
     }
@@ -137,9 +140,7 @@ const PlaybookStepsPage: React.FC = () => {
     if (!playbook) return;
     setError(null);
     try {
-      const response = await apiClient.put<PlaybookStep>(`/playbooks/${playbook.playbook_id}/steps/${stepId}`, updatedStepData);
-      const updatedStep = response.data;
-
+      const updatedStep = await playbooksApi.updatePlaybookStep(playbook.id, stepId.toString(), updatedStepData);
       setPlaybook(currentPlaybook => {
         if (!currentPlaybook) return null;
         return {
@@ -171,7 +172,7 @@ const PlaybookStepsPage: React.FC = () => {
         <>
           <div className="border-b border-gray-200 pb-4 mb-4">
              <h1 className="text-xl font-semibold text-gray-800 mb-1">{playbook.name}</h1>
-             <p className="text-sm text-gray-700 mb-1">Trigger: <span className="font-medium text-gray-900">{playbook.finding_type}</span></p>
+             <p className="text-sm text-gray-700 mb-1">Agent Type: <span className="font-medium text-gray-900">{playbook.agent_type}</span></p>
              <p className="text-sm text-gray-500">{playbook.description || 'No description provided.'}</p>
           </div>
 

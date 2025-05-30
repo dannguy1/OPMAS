@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useQuery } from '@tanstack/react-query';
-import api from '../../lib/api';
+import { actionsApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface ExportActionsProps {
@@ -17,7 +17,7 @@ interface ExportActionsProps {
 export const ExportActions: React.FC<ExportActionsProps> = ({ filters = {} }) => {
   const { data: actions, isLoading } = useQuery({
     queryKey: ['actions', filters],
-    queryFn: () => api.get('/actions', {
+    queryFn: () => actionsApi.get('/actions', {
       params: {
         search: filters.search || undefined,
         priority: filters.priority || undefined,

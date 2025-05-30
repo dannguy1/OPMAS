@@ -29,7 +29,7 @@ class Device(Base):
     last_seen: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Foreign keys
-    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    owner_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     # Relationships
     owner = relationship("User", back_populates="devices")

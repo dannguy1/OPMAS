@@ -4,7 +4,7 @@ import { AgentRule } from '../pages/AgentRulesPage';
 interface AddAgentRuleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (ruleData: { rule_name: string; rule_config: AgentRule['rule_config'] }) => Promise<void>;
+  onSubmit: (ruleData: { name: string; config: AgentRule['config'] }) => Promise<void>;
 }
 
 const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -53,7 +53,7 @@ const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, 
       return;
     }
 
-    const ruleConfig: AgentRule['rule_config'] = {
+    const ruleConfig: AgentRule['config'] = {
       type: ruleType,
       patterns: validPatterns,
       enabled: true
@@ -62,8 +62,8 @@ const AddAgentRuleModal: React.FC<AddAgentRuleModalProps> = ({ isOpen, onClose, 
     setIsSubmitting(true);
     try {
       await onSubmit({
-        rule_name: ruleName.trim(),
-        rule_config: ruleConfig
+        name: ruleName.trim(),
+        config: ruleConfig
       });
     } catch (err: any) {
       const errorMsg = err.message || 'An unexpected error occurred while adding the rule.';

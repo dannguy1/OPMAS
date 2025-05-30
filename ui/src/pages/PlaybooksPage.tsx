@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom'; // For linking to steps page
-import apiClient from '../api/apiClient';
+import { playbooksApi } from '../services/api';
 import toast from 'react-hot-toast'; // Import toast
 import AddPlaybookModal from '../components/AddPlaybookModal'; // Import Add modal
 import EditPlaybookModal from '../components/EditPlaybookModal'; // Import Edit modal
 
 // --- Interfaces matching API response ---
-// Keep existing interfaces: PlaybookStep, Playbook, PlaybooksApiResponse
-// Add export to Playbook interface so EditPlaybookModal can use it
 export interface PlaybookStep {
   step_id: number;
   step_order: number;
@@ -17,18 +15,24 @@ export interface PlaybookStep {
 }
 
 export interface Playbook {
-  playbook_id: number;
-  finding_type: string;
+  id: string;  // Changed from playbook_id: number to id: string (UUID)
   name: string;
+  agent_type: string;  // Changed from finding_type to agent_type
   description?: string;
   steps: PlaybookStep[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+  last_executed?: string;
+  execution_count: number;
+  owner_id?: string;
 }
 
 interface PlaybooksApiResponse {
-    playbooks: Playbook[];
-    total: number;
-    limit: number;
-    offset: number;
+  items: Playbook[];
+  total: number;
+  skip: number;
+  limit: number;
 }
 // ----------------------------------------
 
@@ -46,11 +50,8 @@ const PlaybooksPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get<PlaybooksApiResponse>(
-          '/api/v1/playbooks',
-          { params: { limit: 50, offset: 0 } } // Fetch initial page
-      );
-      setPlaybooks(response.data.playbooks || []);
+      const response = await playbooksApi.getPlaybooks();
+      setPlaybooks(response.items || []);
       // TODO: Set pagination state
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Failed to load playbooks. Is the Management API running?';
@@ -80,12 +81,10 @@ const PlaybooksPage: React.FC = () => {
   };
 
   // --- Modal Submit Handlers ---
-  const handleAddSubmit = async (newPlaybookData: { name: string; finding_type: string; description?: string }) => {
-    // setLoading(true); // Optional: Indicate loading on the page, though modal has its own indicator
+  const handleAddSubmit = async (newPlaybookData: { name: string; agent_type: string; description?: string }) => {
     setError(null);
     try {
-      const response = await apiClient.post<Playbook>('/api/v1/playbooks', newPlaybookData);
-      const createdPlaybook = response.data;
+      const createdPlaybook = await playbooksApi.createPlaybook(newPlaybookData);
       setPlaybooks(currentPlaybooks => [createdPlaybook, ...currentPlaybooks]);
       toast.success(`Playbook '${createdPlaybook.name}' added successfully.`);
       setIsAddModalOpen(false); // Close modal on success
@@ -95,19 +94,16 @@ const PlaybooksPage: React.FC = () => {
       toast.error(errorMsg);
       // Throw error so modal can display it
       throw new Error(errorMsg);
-    } finally {
-      // setLoading(false);
     }
   };
 
-  const handleEditSubmit = async (playbookId: string, updatedPlaybookData: { name: string; finding_type: string; description?: string }) => {
+  const handleEditSubmit = async (playbookId: string, updatedPlaybookData: { name: string; agent_type: string; description?: string }) => {
     setError(null);
     try {
-      const response = await apiClient.put<Playbook>(`/api/v1/playbooks/${Number(playbookId)}`, updatedPlaybookData);
-      const updatedPlaybook = response.data;
+      const updatedPlaybook = await playbooksApi.updatePlaybook(playbookId, updatedPlaybookData);
       setPlaybooks(currentPlaybooks =>
           currentPlaybooks.map(pb =>
-              pb.playbook_id === updatedPlaybook.playbook_id ? updatedPlaybook : pb
+              pb.id === updatedPlaybook.id ? updatedPlaybook : pb
           )
       );
       toast.success(`Playbook '${updatedPlaybook.name}' updated successfully.`);
@@ -121,14 +117,14 @@ const PlaybooksPage: React.FC = () => {
     }
   };
 
-  const handleDeletePlaybook = async (playbookId: number) => {
+  const handleDeletePlaybook = async (playbookId: string) => {
      if (window.confirm(`Are you sure you want to delete playbook ${playbookId}? This cannot be undone.`)) {
          try {
             setError(null); // Clear previous errors
-            await apiClient.delete(`/api/v1/playbooks/${playbookId}`);
+            await playbooksApi.deletePlaybook(playbookId);
             console.info(`Successfully deleted playbook ${playbookId}`);
             setPlaybooks(currentPlaybooks =>
-                currentPlaybooks.filter(pb => pb.playbook_id !== playbookId)
+                currentPlaybooks.filter(pb => pb.id !== playbookId)
             );
             toast.success(`Playbook ${playbookId} deleted successfully.`);
          } catch (err: any) {
@@ -172,7 +168,7 @@ const PlaybooksPage: React.FC = () => {
                <tr>
                  {/* th styles */}
                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Playbook Name</th>
-                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Triggering Finding Type</th>
+                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Agent Type</th>
                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Steps</th>
                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">Description</th>
                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -183,12 +179,12 @@ const PlaybooksPage: React.FC = () => {
                {playbooks.length > 0 ? (
                  playbooks.map((playbook) => (
                    // tr style
-                   <tr key={playbook.playbook_id}>
+                   <tr key={playbook.id}>
                      {/* td styles */}
                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600 hover:underline border-r border-gray-200">
-                        <Link to={`/playbooks/${playbook.playbook_id}/steps`}>{playbook.name}</Link>
+                        <Link to={`/playbooks/${playbook.id}/steps`}>{playbook.name}</Link>
                      </td>
-                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200">{playbook.finding_type}</td>
+                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200">{playbook.agent_type}</td>
                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 border-r border-gray-200 text-center">{playbook.steps.length}</td>
                      <td className="px-4 py-3 text-sm text-gray-500 border-r border-gray-200">{playbook.description || 'N/A'}</td>
                      {/* Use outline buttons for actions */}
@@ -203,7 +199,7 @@ const PlaybooksPage: React.FC = () => {
                         </button>
                         {/* Delete Button - btn-outline-danger btn-sm */}
                         <button
-                           onClick={() => handleDeletePlaybook(playbook.playbook_id)}
+                           onClick={() => handleDeletePlaybook(playbook.id)}
                            className="px-2 py-1 text-xs border border-red-500 bg-white text-red-600 rounded hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-red-400 transition duration-150"
                            title="Delete Playbook"
                         >

@@ -31,6 +31,7 @@ class User(Base):
     rules = relationship("Rule", back_populates="owner")
     findings = relationship("Finding", back_populates="reporter")
     actions = relationship("Action", back_populates="assignee")
+    playbooks = relationship("Playbook", back_populates="owner")
 
     def __repr__(self) -> str:
         """Return string representation of user."""

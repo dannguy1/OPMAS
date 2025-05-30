@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 from opmas_mgmt_api.db.base_class import Base
 from opmas_mgmt_api.models.findings import Finding
-from sqlalchemy import JSON, ForeignKey, String
+from sqlalchemy import JSON, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -19,10 +19,11 @@ class Agent(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    version: Mapped[str] = mapped_column(String(50), nullable=False)
+    version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="stopped")
+    enabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     last_heartbeat: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    configuration: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    agent_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     capabilities: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
 
     # Foreign keys
@@ -46,7 +47,8 @@ class Agent(Base):
             "type": self.agent_type,
             "status": self.status,
             "version": self.version,
-            "config": self.configuration,
+            "enabled": self.enabled,
+            "metadata": self.agent_metadata,
             "capabilities": self.capabilities,
             "last_heartbeat": (self.last_heartbeat.isoformat() if self.last_heartbeat else None),
             "device_id": str(self.device_id),

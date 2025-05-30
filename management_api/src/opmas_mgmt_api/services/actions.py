@@ -30,6 +30,9 @@ class ActionService:
         limit: int = 100,
         status: Optional[str] = None,
         finding_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        sort_by: str = "created_at",
+        sort_direction: str = "asc",
     ) -> List[ActionResponse]:
         """List actions with optional filtering.
 
@@ -38,16 +41,55 @@ class ActionService:
             limit: Maximum number of records to return
             status: Filter by status
             finding_id: Filter by finding ID
+            search: Search term
+            sort_by: Field to sort by
+            sort_direction: Sort direction (asc/desc)
 
         Returns:
             List of actions
         """
-        query = select(Action)
+        # Build base query
+        query = select(
+            Action.id,
+            Action.description,
+            Action.action_type,
+            Action.status,
+            Action.priority,
+            Action.action_metadata,
+            Action.created_at,
+            Action.updated_at,
+            Action.completed_at,
+            Action.finding_id,
+            Action.assignee_id,
+        )
 
+        # Apply filters
         if status:
             query = query.where(Action.status == status)
         if finding_id:
             query = query.where(Action.finding_id == finding_id)
+        if search:
+            query = query.where((Action.description.ilike(f"%{search}%")))
+
+        # Map frontend field names to model field names
+        field_mapping = {
+            "dueDate": "completed_at",
+            "createdAt": "created_at",
+            "updatedAt": "updated_at",
+            "findingId": "finding_id",
+            "completedAt": "completed_at",
+            "actionType": "action_type",
+            "priority": "priority",
+            "assignedTo": "assignee_id",
+        }
+        sort_field = field_mapping.get(sort_by, sort_by)
+
+        # Apply sorting
+        sort_column = getattr(Action, sort_field, Action.created_at)
+        if sort_direction.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
 
         # Apply pagination
         query = query.offset(skip).limit(limit)

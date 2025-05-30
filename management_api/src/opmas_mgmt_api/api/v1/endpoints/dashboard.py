@@ -4,8 +4,7 @@ import logging
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
-from opmas_mgmt_api.api.deps import get_current_user, get_db, get_nats
-from opmas_mgmt_api.core.nats import NATSManager
+from opmas_mgmt_api.api.deps import get_current_user, get_db
 from opmas_mgmt_api.schemas.auth import User
 from opmas_mgmt_api.schemas.dashboard import DashboardStats, RecentActivity
 from opmas_mgmt_api.services.agents import AgentService
@@ -105,8 +104,8 @@ async def get_recent_activity(
                 id=i,
                 timestamp=activity.get("timestamp"),
                 type=activity.get("type", "unknown"),
-                description=activity.get("description", ""),
-                severity=activity.get("severity", "info"),
+                description=activity.get("message", ""),
+                severity=activity.get("level", "info"),
             )
             for i, activity in enumerate(all_activity[:10])
         ]

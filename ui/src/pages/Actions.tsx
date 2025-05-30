@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { actionsApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -48,7 +48,7 @@ export const Actions: React.FC = () => {
 
   const { data: actions, isLoading } = useQuery({
     queryKey: ['actions', searchTerm, selectedPriority, selectedStatus, sortField, sortDirection],
-    queryFn: () => api.get('/actions', {
+    queryFn: () => actionsApi.get('/actions', {
       params: {
         search: searchTerm || undefined,
         priority: selectedPriority || undefined,
@@ -61,7 +61,7 @@ export const Actions: React.FC = () => {
                 sortField === 'completedAt' ? 'completed_at' : sortField,
         sort_direction: sortDirection
       }
-    }).then(res => res.data)
+    })
   });
 
   const handleSort = (field: keyof Action) => {

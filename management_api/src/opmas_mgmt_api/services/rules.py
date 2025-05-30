@@ -32,14 +32,26 @@ class RuleService:
         enabled: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """List rules with optional filtering."""
-        query = select(Rule)
+        # Build base query with only existing columns
+        query = select(
+            Rule.id,
+            Rule.name,
+            Rule.description,
+            Rule.agent_type,
+            Rule.priority,
+            Rule.enabled,
+            Rule.rule_metadata,
+            Rule.created_at,
+            Rule.updated_at,
+            Rule.last_triggered,
+            Rule.trigger_count,
+            Rule.owner_id,
+        )
 
         # Apply search filter
         if search:
             search_term = f"%{search}%"
-            query = query.where(
-                (Rule.name.ilike(search_term)) | (Rule.description.ilike(search_term))
-            )
+            query = query.where((Rule.name.ilike(search_term)) | (Rule.description.ilike(search_term)))
 
         # Apply other filters
         if agent_type:
@@ -67,7 +79,9 @@ class RuleService:
             query = query.order_by(sort_column.asc())
 
         # Get total count
-        count_query = select(Rule.id).select_from(query.subquery())
+        count_query = select(Rule.id)
+        if query.whereclause is not None:
+            count_query = count_query.where(query.whereclause)
         result = await self.db.execute(count_query)
         total = len(result.scalars().all())
 
@@ -173,9 +187,7 @@ class RuleService:
             details={"priority": rule.priority, "agent_type": rule.agent_type},
         )
 
-    async def update_rule_status(
-        self, rule_id: UUID, status: str, error: Optional[str] = None
-    ) -> RuleStatus:
+    async def update_rule_status(self, rule_id: UUID, status: str, error: Optional[str] = None) -> RuleStatus:
         """Update rule status."""
         rule = await self.get_rule(rule_id)
 

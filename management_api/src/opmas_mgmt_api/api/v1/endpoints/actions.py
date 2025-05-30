@@ -19,6 +19,9 @@ async def get_actions(
     limit: int = 100,
     status: Optional[str] = None,
     finding_id: Optional[UUID] = None,
+    search: Optional[str] = None,
+    sort_by: str = "due_date",
+    sort_direction: str = "asc",
     db: AsyncSession = Depends(get_db),
     nats: NATSManager = Depends(get_nats),
 ) -> List[ActionResponse]:
@@ -29,6 +32,9 @@ async def get_actions(
         limit: Maximum number of records to return
         status: Filter by status
         finding_id: Filter by finding ID
+        search: Search term
+        sort_by: Field to sort by
+        sort_direction: Sort direction (asc/desc)
         db: Database session
         nats: NATS manager
 
@@ -36,7 +42,15 @@ async def get_actions(
         List of actions
     """
     service = ActionService(db, nats)
-    return await service.list_actions(skip=skip, limit=limit, status=status, finding_id=finding_id)
+    return await service.list_actions(
+        skip=skip,
+        limit=limit,
+        status=status,
+        finding_id=finding_id,
+        search=search,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+    )
 
 
 @router.post("/", response_model=ActionResponse)

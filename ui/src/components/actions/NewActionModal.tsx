@@ -3,7 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import api from '../../lib/api';
+import { actionsApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface NewActionModalProps {
@@ -33,7 +33,7 @@ export const NewActionModal: React.FC<NewActionModalProps> = ({ isOpen, onClose 
 
   const { data: findings } = useQuery({
     queryKey: ['findings'],
-    queryFn: () => api.get('/findings', {
+    queryFn: () => actionsApi.get('/findings', {
       params: {
         sort_by: 'created_at',
         sort_direction: 'desc'
@@ -42,7 +42,7 @@ export const NewActionModal: React.FC<NewActionModalProps> = ({ isOpen, onClose 
   });
 
   const createActionMutation = useMutation({
-    mutationFn: (data: NewActionFormData) => api.post('/actions', data),
+    mutationFn: (data: NewActionFormData) => actionsApi.post('/actions', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['actions'] });
       toast.success('Action created successfully');

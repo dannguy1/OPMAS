@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { systemApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -32,13 +32,16 @@ export const Devices: React.FC = () => {
 
   const { data: devicesData, isLoading } = useQuery<DevicesResponse>({
     queryKey: ['devices', searchTerm, sortField, sortDirection],
-    queryFn: () => api.get('/devices', {
+    queryFn: () => systemApi.get('/devices', {
       params: {
         search: searchTerm,
-        sort_by: sortField,
+        sort_by: sortField === 'lastSeen' ? 'last_seen' :
+                sortField === 'createdAt' ? 'created_at' :
+                sortField === 'updatedAt' ? 'updated_at' :
+                sortField === 'ipAddress' ? 'ip_address' : sortField,
         sort_direction: sortDirection,
       }
-    }).then(res => res.data)
+    })
   });
 
   const handleSort = (field: keyof Device) => {

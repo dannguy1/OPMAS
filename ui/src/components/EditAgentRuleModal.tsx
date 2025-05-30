@@ -4,15 +4,15 @@ import { AgentRule } from '../pages/AgentRulesPage';
 interface EditAgentRuleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (ruleId: number, ruleData: { rule_name: string; rule_config: AgentRule['rule_config'] }) => Promise<void>;
-  ruleToEdit: AgentRule | null;
+  onSubmit: (ruleData: { name: string; config: AgentRule['config'] }) => Promise<void>;
+  rule: AgentRule;
 }
 
 const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  ruleToEdit
+  rule
 }) => {
   const [ruleName, setRuleName] = useState('');
   const [ruleType, setRuleType] = useState('classification');
@@ -21,14 +21,14 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && ruleToEdit) {
-      setRuleName(ruleToEdit.rule_name);
-      setRuleType(ruleToEdit.rule_config.type || 'classification');
-      setClassificationPatterns(ruleToEdit.rule_config.patterns || ['']);
+    if (isOpen && rule) {
+      setRuleName(rule.name);
+      setRuleType(rule.config.type || 'classification');
+      setClassificationPatterns(rule.config.patterns || ['']);
       setError(null);
       setIsSubmitting(false);
     }
-  }, [isOpen, ruleToEdit]);
+  }, [isOpen, rule]);
 
   const handleAddPattern = () => {
     setClassificationPatterns([...classificationPatterns, '']);
@@ -46,7 +46,7 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!ruleToEdit) return;
+    if (!rule) return;
 
     setError(null);
 
@@ -61,17 +61,17 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
       return;
     }
 
-    const ruleConfig: AgentRule['rule_config'] = {
+    const ruleConfig: AgentRule['config'] = {
       type: ruleType,
       patterns: validPatterns,
-      enabled: ruleToEdit.rule_config.enabled
+      enabled: rule.config.enabled
     };
 
     setIsSubmitting(true);
     try {
-      await onSubmit(ruleToEdit.rule_id, {
-        rule_name: ruleName.trim(),
-        rule_config: ruleConfig
+      await onSubmit({
+        name: ruleName.trim(),
+        config: ruleConfig
       });
     } catch (err: any) {
       const errorMsg = err.message || 'An unexpected error occurred while updating the rule.';
@@ -82,7 +82,7 @@ const EditAgentRuleModal: React.FC<EditAgentRuleModalProps> = ({
     }
   };
 
-  if (!isOpen || !ruleToEdit) {
+  if (!isOpen || !rule) {
     return null;
   }
 

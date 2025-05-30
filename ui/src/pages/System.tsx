@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { systemApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -32,7 +32,7 @@ export const System: React.FC = () => {
 
   const { data: systemData, isLoading } = useQuery<SystemResponse>({
     queryKey: ['system', searchTerm, sortField, sortDirection],
-    queryFn: () => api.get('/system', {
+    queryFn: () => systemApi.get('/system', {
       params: {
         search: searchTerm,
         sort_by: sortField,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { dashboardApi } from '../services/api';
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
@@ -25,12 +25,12 @@ interface RecentActivity {
 export const Dashboard: React.FC = () => {
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ['dashboardStats'],
-    queryFn: () => api.get('/dashboard/stats').then(res => res.data)
+    queryFn: () => dashboardApi.getStats()
   });
 
   const { data: recentActivity, isLoading: activityLoading } = useQuery<RecentActivity[]>({
     queryKey: ['recentActivity'],
-    queryFn: () => api.get('/dashboard/activity/recent').then(res => res.data)
+    queryFn: () => dashboardApi.getRecentActivity()
   });
 
   if (statsLoading || activityLoading) {
@@ -40,7 +40,7 @@ export const Dashboard: React.FC = () => {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-      
+
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">

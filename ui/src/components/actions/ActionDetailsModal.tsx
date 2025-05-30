@@ -3,7 +3,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../../lib/api';
+import { actionsApi } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface Action {
@@ -61,7 +61,7 @@ export const ActionDetailsModal: React.FC<ActionDetailsModalProps> = ({
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ actionId, status }: { actionId: string; status: Action['status'] }) =>
-      api.patch(`/actions/${actionId}/status`, { status }),
+      actionsApi.patch(`/actions/${actionId}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['actions'] });
       toast.success('Action status updated successfully');
@@ -74,7 +74,7 @@ export const ActionDetailsModal: React.FC<ActionDetailsModalProps> = ({
 
   const updateAssigneeMutation = useMutation({
     mutationFn: ({ actionId, assignedTo }: { actionId: string; assignedTo: string }) =>
-      api.patch(`/actions/${actionId}/assign`, { assignedTo }),
+      actionsApi.patch(`/actions/${actionId}/assign`, { assignedTo }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['actions'] });
       toast.success('Action assignment updated successfully');
@@ -88,7 +88,7 @@ export const ActionDetailsModal: React.FC<ActionDetailsModalProps> = ({
 
   const updateCompletionMutation = useMutation({
     mutationFn: ({ actionId, notes }: { actionId: string; notes: string }) =>
-      api.patch(`/actions/${actionId}/complete`, { notes }),
+      actionsApi.patch(`/actions/${actionId}/complete`, { notes }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['actions'] });
       toast.success('Action completion updated successfully');

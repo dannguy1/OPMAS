@@ -31,16 +31,34 @@ class PlaybookService:
         enabled: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """List playbooks with optional filtering."""
-        # Build base query
-        base_query = select(Playbook)
+        # Build base query with only existing columns
+        base_query = select(
+            Playbook.id,
+            Playbook.name,
+            Playbook.description,
+            Playbook.agent_type,
+            Playbook.enabled,
+            Playbook.steps,
+            Playbook.playbook_metadata,
+            Playbook.created_at,
+            Playbook.updated_at,
+            Playbook.last_executed,
+            Playbook.execution_count,
+            Playbook.owner_id,
+        )
+
+        # Apply filters
         if agent_type:
             base_query = base_query.where(Playbook.agent_type == agent_type)
         if enabled is not None:
             base_query = base_query.where(Playbook.enabled == enabled)
 
         # Get total count
-        count_query = select(func.count()).select_from(base_query.subquery())
-        total = await self.db.scalar(count_query)
+        count_query = select(Playbook.id)
+        if base_query.whereclause is not None:
+            count_query = count_query.where(base_query.whereclause)
+        result = await self.db.execute(count_query)
+        total = len(result.scalars().all())
 
         # Get paginated results
         query = base_query.offset(skip).limit(limit)
@@ -49,7 +67,7 @@ class PlaybookService:
 
         return {
             "items": playbooks,
-            "total": total or 0,  # Ensure total is never None
+            "total": total,
             "skip": skip,
             "limit": limit,
         }
@@ -99,9 +117,7 @@ class PlaybookService:
             query = select(Playbook).where(Playbook.name == playbook_data.name)
             result = await self.db.execute(query)
             if result.scalar_one_or_none():
-                raise ValidationError(
-                    f"Playbook update failed: duplicate name: {playbook_data.name}"
-                )
+                raise ValidationError(f"Playbook update failed: duplicate name: {playbook_data.name}")
 
         update_data = playbook_data.dict(exclude_unset=True)
         for field, value in update_data.items():

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { systemApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -33,10 +33,12 @@ export const Agents: React.FC = () => {
 
   const { data: agentsData, isLoading } = useQuery<AgentsResponse>({
     queryKey: ['agents', searchTerm, sortField, sortDirection],
-    queryFn: () => api.get('/agents', {
+    queryFn: () => systemApi.get('/agents', {
       params: {
         search: searchTerm,
-        sort_by: sortField,
+        sort_by: sortField === 'lastHeartbeat' ? 'last_heartbeat' :
+                sortField === 'createdAt' ? 'created_at' :
+                sortField === 'updatedAt' ? 'updated_at' : sortField,
         sort_direction: sortDirection,
       }
     }).then(res => res.data)
@@ -69,7 +71,7 @@ export const Agents: React.FC = () => {
   const fetchDiscoveredAgents = async () => {
     setDiscovering(true);
     try {
-      await api.post('/agents/discover');
+      await systemApi.post('/agents/discover');
     } catch (error) {
       console.error('Error discovering new agents:', error);
     } finally {

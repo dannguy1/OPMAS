@@ -34,31 +34,94 @@ class AgentService:
         agent_type: Optional[str] = None,
         status: Optional[str] = None,
         enabled: Optional[bool] = None,
-        device_id: Optional[UUID] = None,
+        search: Optional[str] = None,
+        sort_by: str = "name",
+        sort_direction: str = "asc",
     ) -> Dict[str, Any]:
         """List agents with pagination and filtering."""
-        query = select(Agent)
+        # Build base query with only existing columns
+        query = select(
+            Agent.id,
+            Agent.name,
+            Agent.agent_type,
+            Agent.version,
+            Agent.status,
+            Agent.enabled,
+            Agent.last_heartbeat,
+            Agent.agent_metadata,
+            Agent.capabilities,
+        )
 
+        # Apply filters
         if agent_type:
             query = query.where(Agent.agent_type == agent_type)
         if status:
             query = query.where(Agent.status == status)
         if enabled is not None:
             query = query.where(Agent.enabled == enabled)
-        if device_id:
-            query = query.where(Agent.device_id == device_id)
+        if search:
+            query = query.where((Agent.name.ilike(f"%{search}%")) | (Agent.agent_type.ilike(f"%{search}%")))
+
+        # Map frontend field names to model field names
+        field_mapping = {
+            "name": "name",
+            "type": "agent_type",
+            "status": "status",
+            "enabled": "enabled",
+            "lastHeartbeat": "last_heartbeat",
+        }
+        sort_field = field_mapping.get(sort_by, sort_by)
+
+        # Apply sorting
+        sort_column = getattr(Agent, sort_field, Agent.name)
+        if sort_direction.lower() == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
 
         # Get total count
-        count_query = select(Agent.id).select_from(query.subquery())
+        count_query = select(Agent.id)
+        if query.whereclause is not None:
+            count_query = count_query.where(query.whereclause)
         result = await self.db.execute(count_query)
         total = len(result.scalars().all())
+
+        # Calculate pagination
+        page = (skip // limit) + 1
+        pages = (total + limit - 1) // limit
 
         # Apply pagination
         query = query.offset(skip).limit(limit)
         result = await self.db.execute(query)
         agents = result.scalars().all()
 
-        return {"items": agents, "total": total, "skip": skip, "limit": limit}
+        # Convert to response models
+        agent_responses = []
+        for agent in agents:
+            agent_dict = {
+                "id": agent.id,
+                "name": agent.name,
+                "agent_type": agent.agent_type,
+                "status": agent.status,
+                "enabled": agent.enabled,
+                "last_seen": agent.last_heartbeat,
+                "agent_metadata": agent.agent_metadata or {},
+                "hostname": agent.agent_metadata.get("hostname", "") if agent.agent_metadata else "",
+                "ip_address": agent.agent_metadata.get("ip_address", "127.0.0.1")
+                if agent.agent_metadata
+                else "127.0.0.1",
+                "port": agent.agent_metadata.get("port", 8080) if agent.agent_metadata else 8080,
+                "confidence": agent.agent_metadata.get("confidence", 1.0) if agent.agent_metadata else 1.0,
+            }
+            agent_responses.append(agent_dict)
+
+        return {
+            "agents": agent_responses,
+            "total": total,
+            "page": page,
+            "size": limit,
+            "pages": pages,
+        }
 
     async def create_agent(self, agent: AgentCreate) -> Agent:
         """Create a new agent."""
@@ -149,24 +212,16 @@ class AgentService:
         return AgentStatus(
             status=agent.status,
             timestamp=agent.updated_at,
-            details={
-                "last_heartbeat": (
-                    agent.last_heartbeat.isoformat() if agent.last_heartbeat else None
-                )
-            },
+            details={"last_heartbeat": (agent.last_heartbeat.isoformat() if agent.last_heartbeat else None)},
             metrics=agent.capabilities.get("metrics", {}) if agent.capabilities else {},
         )
 
-    async def update_agent_status(
-        self, agent_id: UUID, status: AgentStatus
-    ) -> Optional[AgentStatus]:
+    async def update_agent_status(self, agent_id: UUID, status: AgentStatus) -> Optional[AgentStatus]:
         """Update agent status."""
         query = (
             update(Agent)
             .where(Agent.id == agent_id)
-            .values(
-                status=status.status, last_heartbeat=datetime.utcnow(), updated_at=datetime.utcnow()
-            )
+            .values(status=status.status, last_heartbeat=datetime.utcnow(), updated_at=datetime.utcnow())
             .returning(Agent)
         )
 
@@ -269,19 +324,13 @@ class AgentService:
                     name=agent.name,
                     agent_type=agent.type,
                     hostname=(
-                        agent.agent_metadata.get("hostname", "localhost")
-                        if agent.agent_metadata
-                        else "localhost"
+                        agent.agent_metadata.get("hostname", "localhost") if agent.agent_metadata else "localhost"
                     ),
                     ip_address=(
-                        agent.agent_metadata.get("ip_address", "127.0.0.1")
-                        if agent.agent_metadata
-                        else "127.0.0.1"
+                        agent.agent_metadata.get("ip_address", "127.0.0.1") if agent.agent_metadata else "127.0.0.1"
                     ),
                     port=(agent.agent_metadata.get("port", 8080) if agent.agent_metadata else 8080),
-                    confidence=(
-                        agent.agent_metadata.get("confidence", 1.0) if agent.agent_metadata else 1.0
-                    ),
+                    confidence=(agent.agent_metadata.get("confidence", 1.0) if agent.agent_metadata else 1.0),
                     agent_metadata=agent.agent_metadata or {},
                 )
                 for agent in agents

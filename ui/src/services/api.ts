@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { User, Finding, Action, DashboardStats, RecentActivity } from '../types';
 
 // API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.10.8:8000';
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Error types
@@ -71,13 +71,16 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Export the apiClient instance
+export default apiClient;
+
 // Auth API
 export const authApi = {
   login: async (username: string, password: string) => {
     const formData = new URLSearchParams();
     formData.append('username', username);
     formData.append('password', password);
-    
+
     const response = await apiClient.post<{ access_token: string; token_type: string }>(
       '/api/v1/auth/login',
       formData,
@@ -134,25 +137,111 @@ export const findingsApi = {
   },
 };
 
+// System API
+export const systemApi = {
+  get: async (path: string, config?: any) => {
+    const response = await apiClient.get(`/api/v1${path}`, config);
+    return response.data;
+  },
+  post: async (path: string, data: any) => {
+    const response = await apiClient.post(`/api/v1${path}`, data);
+    return response.data;
+  },
+};
+
 // Actions API
 export const actionsApi = {
-  getActions: async () => {
-    const response = await apiClient.get<Action[]>('/api/v1/actions');
+  get: async (path: string, config?: any) => {
+    const response = await apiClient.get(`/api/v1${path}`, config);
     return response.data;
   },
-  getAction: async (id: string) => {
-    const response = await apiClient.get<Action>(`/api/v1/actions/${id}`);
+  post: async (path: string, data: any) => {
+    const response = await apiClient.post(`/api/v1${path}`, data);
     return response.data;
   },
-  createAction: async (action: Omit<Action, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const response = await apiClient.post<Action>('/api/v1/actions', action);
+  patch: async (path: string, data: any) => {
+    const response = await apiClient.patch(`/api/v1${path}`, data);
     return response.data;
   },
-  updateAction: async (id: string, action: Partial<Action>) => {
-    const response = await apiClient.put<Action>(`/api/v1/actions/${id}`, action);
+  delete: async (path: string) => {
+    await apiClient.delete(`/api/v1${path}`);
+  },
+};
+
+// Playbooks API
+export const playbooksApi = {
+  getPlaybooks: async () => {
+    const response = await apiClient.get('/api/v1/playbooks');
     return response.data;
   },
-  deleteAction: async (id: string) => {
-    await apiClient.delete(`/api/v1/actions/${id}`);
+  getPlaybook: async (id: string) => {
+    const response = await apiClient.get(`/api/v1/playbooks/${id}`);
+    return response.data;
+  },
+  createPlaybook: async (playbook: { name: string; agent_type: string; description?: string }) => {
+    const response = await apiClient.post('/api/v1/playbooks', playbook);
+    return response.data;
+  },
+  updatePlaybook: async (id: string, playbook: { name: string; agent_type: string; description?: string }) => {
+    const response = await apiClient.put(`/api/v1/playbooks/${id}`, playbook);
+    return response.data;
+  },
+  deletePlaybook: async (id: string) => {
+    await apiClient.delete(`/api/v1/playbooks/${id}`);
+  },
+  getPlaybookStatus: async (id: string) => {
+    const response = await apiClient.get(`/api/v1/playbooks/${id}/status`);
+    return response.data;
+  },
+  executePlaybook: async (id: string, metadata?: any) => {
+    const response = await apiClient.post(`/api/v1/playbooks/${id}/execute`, metadata);
+    return response.data;
+  },
+  // Playbook Steps
+  getPlaybookSteps: async (playbookId: string) => {
+    const response = await apiClient.get(`/api/v1/playbooks/${playbookId}/steps`);
+    return response.data;
+  },
+  createPlaybookStep: async (playbookId: string, step: { action_type: string; description?: string; command_template?: string }) => {
+    const response = await apiClient.post(`/api/v1/playbooks/${playbookId}/steps`, step);
+    return response.data;
+  },
+  updatePlaybookStep: async (playbookId: string, stepId: string, step: { action_type: string; description?: string; command_template?: string }) => {
+    const response = await apiClient.put(`/api/v1/playbooks/${playbookId}/steps/${stepId}`, step);
+    return response.data;
+  },
+  deletePlaybookStep: async (playbookId: string, stepId: string) => {
+    await apiClient.delete(`/api/v1/playbooks/${playbookId}/steps/${stepId}`);
+  },
+};
+
+// Rules API
+export const rulesApi = {
+  getRules: async (params?: { search?: string; sort_by?: string; sort_direction?: string }) => {
+    const response = await apiClient.get('/api/v1/rules', { params });
+    return response.data;
+  },
+  getRule: async (id: string) => {
+    const response = await apiClient.get(`/api/v1/rules/${id}`);
+    return response.data;
+  },
+  createRule: async (rule: { name: string; agent_type: string; description?: string }) => {
+    const response = await apiClient.post('/api/v1/rules', rule);
+    return response.data;
+  },
+  updateRule: async (id: string, rule: { name: string; agent_type: string; description?: string }) => {
+    const response = await apiClient.put(`/api/v1/rules/${id}`, rule);
+    return response.data;
+  },
+  deleteRule: async (id: string) => {
+    await apiClient.delete(`/api/v1/rules/${id}`);
+  },
+  getRuleStatus: async (id: string) => {
+    const response = await apiClient.get(`/api/v1/rules/${id}/status`);
+    return response.data;
+  },
+  updateRuleStatus: async (id: string, status: string, error?: string) => {
+    const response = await apiClient.post(`/api/v1/rules/${id}/status`, { status, error });
+    return response.data;
   },
 };

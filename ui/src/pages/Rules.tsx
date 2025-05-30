@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/api';
+import { systemApi } from '../services/api';
 import {
   MagnifyingGlassIcon,
   ArrowUpIcon,
@@ -33,7 +33,7 @@ export const Rules: React.FC = () => {
 
   const { data: rulesData, isLoading } = useQuery<RulesResponse>({
     queryKey: ['rules', searchTerm, sortField, sortDirection],
-    queryFn: () => api.get('/rules', {
+    queryFn: () => systemApi.get('/api/v1/rules', {
       params: {
         search: searchTerm,
         sort_by: sortField,

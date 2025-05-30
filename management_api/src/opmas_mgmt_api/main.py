@@ -12,17 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from opmas_mgmt_api.api.v1.endpoints import (
-    actions,
-    agents,
-    auth,
-    dashboard,
-    devices,
-    findings,
-    playbooks,
-    rules,
-    system,
-)
+from opmas_mgmt_api.api.v1.api import api_router
 from opmas_mgmt_api.core.config import settings
 from opmas_mgmt_api.core.nats import NATSManager
 from opmas_mgmt_api.db.init_db import init_db
@@ -138,16 +128,8 @@ async def health_check() -> JSONResponse:
     )
 
 
-# Include routers
-app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
-app.include_router(devices.router, prefix=f"{settings.API_V1_STR}/devices", tags=["devices"])
-app.include_router(agents.router, prefix=f"{settings.API_V1_STR}/agents", tags=["agents"])
-app.include_router(rules.router, prefix=f"{settings.API_V1_STR}/rules", tags=["rules"])
-app.include_router(dashboard.router, prefix=f"{settings.API_V1_STR}/dashboard", tags=["dashboard"])
-app.include_router(findings.router, prefix=f"{settings.API_V1_STR}/findings", tags=["findings"])
-app.include_router(actions.router, prefix=f"{settings.API_V1_STR}/actions", tags=["actions"])
-app.include_router(playbooks.router, prefix=f"{settings.API_V1_STR}/playbooks", tags=["playbooks"])
-app.include_router(system.router, prefix=f"{settings.API_V1_STR}/system", tags=["system"])
+# Include API router
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

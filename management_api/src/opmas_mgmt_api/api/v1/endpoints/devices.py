@@ -32,6 +32,9 @@ async def list_devices(
     device_type: Optional[str] = Query(None, description="Filter by device type"),
     status: Optional[str] = Query(None, description="Filter by status"),
     enabled: Optional[bool] = Query(None, description="Filter by enabled status"),
+    search: Optional[str] = Query(None, description="Search term"),
+    sort_by: str = Query("name", description="Field to sort by"),
+    sort_direction: str = Query("asc", description="Sort direction (asc/desc)"),
     db: AsyncSession = Depends(get_db),
     nats=Depends(get_nats),
 ) -> DeviceList:
@@ -43,6 +46,9 @@ async def list_devices(
         device_type=device_type,
         status=status,
         enabled=enabled,
+        search=search,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
     )
 
 
@@ -59,9 +65,7 @@ async def create_device(
 
 
 @route.get("/{device_id}", response_model=DeviceResponse)
-async def get_device(
-    device_id: UUID, db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> DeviceResponse:
+async def get_device(device_id: UUID, db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> DeviceResponse:
     """Get device by ID."""
     service = DeviceService(db, nats)
     try:
@@ -88,9 +92,7 @@ async def update_device(
 
 
 @route.delete("/{device_id}")
-async def delete_device(
-    device_id: UUID, db: AsyncSession = Depends(get_db), nats=Depends(get_nats)
-) -> None:
+async def delete_device(device_id: UUID, db: AsyncSession = Depends(get_db), nats=Depends(get_nats)) -> None:
     """Delete a device."""
     service = DeviceService(db, nats)
     try:

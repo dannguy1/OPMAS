@@ -19,7 +19,7 @@ class PlaybookStep(BaseModel):
     retry_count: Optional[int] = Field(None, description="Number of retry attempts")
     retry_delay: Optional[int] = Field(None, description="Delay between retries in seconds")
     enabled: bool = Field(default=True, description="Whether the step is enabled")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional step metadata")
+    extra_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional step metadata")
 
 
 class PlaybookBase(BaseModel):
@@ -30,9 +30,7 @@ class PlaybookBase(BaseModel):
     agent_type: str = Field(..., description="Type of agent this playbook applies to")
     steps: List[PlaybookStep] = Field(..., description="List of playbook steps")
     enabled: bool = Field(default=True, description="Whether the playbook is enabled")
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional playbook metadata"
-    )
+    extra_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional playbook metadata")
 
 
 class PlaybookCreate(PlaybookBase):
@@ -48,7 +46,7 @@ class PlaybookUpdate(BaseModel):
     description: Optional[str] = Field(None, description="Playbook description")
     steps: Optional[List[PlaybookStep]] = Field(None, description="List of playbook steps")
     enabled: Optional[bool] = Field(None, description="Whether the playbook is enabled")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional playbook metadata")
+    extra_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional playbook metadata")
 
 
 class PlaybookResponse(PlaybookBase):
@@ -57,12 +55,8 @@ class PlaybookResponse(PlaybookBase):
     id: UUID = Field(..., description="Playbook ID")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    last_executed: Optional[datetime] = Field(
-        None, description="Last time the playbook was executed"
-    )
-    execution_count: int = Field(
-        default=0, description="Number of times the playbook has been executed"
-    )
+    last_executed: Optional[datetime] = Field(None, description="Last time the playbook was executed")
+    execution_count: int = Field(default=0, description="Number of times the playbook has been executed")
 
     class Config:
         """Pydantic config."""
@@ -83,9 +77,7 @@ class PlaybookStatus(BaseModel):
     """Schema for playbook status."""
 
     status: str = Field(..., description="Playbook status")
-    last_executed: Optional[datetime] = Field(
-        None, description="Last time the playbook was executed"
-    )
+    last_executed: Optional[datetime] = Field(None, description="Last time the playbook was executed")
     execution_count: int = Field(..., description="Number of times the playbook has been executed")
     last_error: Optional[str] = Field(None, description="Last error message if any")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional status details")
@@ -100,6 +92,4 @@ class PlaybookExecution(BaseModel):
     status: str = Field(..., description="Execution status")
     error: Optional[str] = Field(None, description="Error message if any")
     steps: List[Dict[str, Any]] = Field(..., description="Step execution results")
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional execution metadata"
-    )
+    extra_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional execution metadata")

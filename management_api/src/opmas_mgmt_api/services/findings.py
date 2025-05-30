@@ -25,13 +25,29 @@ class FindingService:
         severity: Optional[str] = None,
         status: Optional[str] = None,
         device_id: Optional[UUID] = None,
+        search: Optional[str] = None,
         sort_by: str = "created_at",
         sort_direction: str = "desc",
     ) -> Dict[str, Any]:
         """List findings with optional filtering and sorting."""
         try:
-            # Build base query
-            query = select(Finding)
+            # Build base query with only existing columns
+            query = select(
+                Finding.id,
+                Finding.title,
+                Finding.description,
+                Finding.severity,
+                Finding.status,
+                Finding.source,
+                Finding.finding_metadata,
+                Finding.created_at,
+                Finding.updated_at,
+                Finding.resolved_at,
+                Finding.device_id,
+                Finding.agent_id,
+                Finding.rule_id,
+                Finding.reporter_id,
+            )
 
             # Add filters
             if severity:
@@ -40,16 +56,29 @@ class FindingService:
                 query = query.where(Finding.status == status)
             if device_id:
                 query = query.where(Finding.device_id == device_id)
+            if search:
+                query = query.where((Finding.title.ilike(f"%{search}%")) | (Finding.description.ilike(f"%{search}%")))
+
+            # Map frontend field names to model field names
+            field_mapping = {
+                "createdAt": "created_at",
+                "updatedAt": "updated_at",
+                "deviceId": "device_id",
+                "resolvedAt": "resolved_at",
+            }
+            sort_field = field_mapping.get(sort_by, sort_by)
 
             # Add sorting
-            sort_column = getattr(Finding, sort_by)
+            sort_column = getattr(Finding, sort_field, Finding.created_at)
             if sort_direction.lower() == "asc":
                 query = query.order_by(asc(sort_column))
             else:
                 query = query.order_by(desc(sort_column))
 
             # Get total count
-            count_query = select(Finding).where(query.whereclause)
+            count_query = select(Finding.id)
+            if query.whereclause is not None:
+                count_query = count_query.where(query.whereclause)
             total = len((await self.db.execute(count_query)).scalars().all())
 
             # Apply pagination
@@ -65,15 +94,12 @@ class FindingService:
                     "description": finding.description,
                     "severity": finding.severity,
                     "status": finding.status,
-                    "category": finding.category,
                     "source": finding.source,
                     "device_id": finding.device_id,
                     "finding_metadata": finding.finding_metadata,
                     "created_at": finding.created_at,
                     "updated_at": finding.updated_at,
                     "resolved_at": finding.resolved_at,
-                    "resolution": finding.resolution,
-                    "assigned_to": finding.assigned_to,
                 }
                 items.append(FindingResponse(**finding_dict))
 

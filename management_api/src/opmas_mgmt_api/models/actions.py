@@ -16,7 +16,6 @@ class Action(Base):
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     action_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending")
@@ -28,7 +27,7 @@ class Action(Base):
 
     # Foreign keys
     finding_id: Mapped[UUID] = mapped_column(ForeignKey("findings.id"), nullable=False)
-    assignee_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    assignee_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     # Relationships
     finding = relationship("Finding", back_populates="actions")
