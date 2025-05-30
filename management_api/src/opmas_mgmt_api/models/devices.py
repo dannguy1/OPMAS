@@ -1,7 +1,7 @@
 """Device management models."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
 from opmas_mgmt_api.db.base_class import Base
@@ -23,16 +23,14 @@ class Device(Base):
     firmware_version: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="offline")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    device_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     last_seen: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Relationships
     agents = relationship("Agent", back_populates="device")
-    status_history = relationship(
-        "DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan"
-    )
+    status_history = relationship("DeviceStatusHistory", back_populates="device", cascade="all, delete-orphan")
 
 
 class DeviceStatusHistory(Base):
@@ -45,7 +43,7 @@ class DeviceStatusHistory(Base):
     device_id: Mapped[UUID] = mapped_column(ForeignKey("devices.id"), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    status_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
 
     # Relationships
     device = relationship("Device", back_populates="status_history")

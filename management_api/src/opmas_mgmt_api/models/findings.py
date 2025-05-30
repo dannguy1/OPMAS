@@ -21,7 +21,7 @@ class Finding(Base):
     severity: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="open")
     source: Mapped[str] = mapped_column(String(100), nullable=False)
-    metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    finding_metadata: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
