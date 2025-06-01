@@ -22,15 +22,18 @@ async def main():
     # Get configuration from environment
     agent_id = os.getenv("AGENT_ID", "example-agent-1")
     nats_url = os.getenv("NATS_URL", "nats://localhost:4222")
+    heartbeat_interval = int(os.getenv("HEARTBEAT_INTERVAL", "30"))
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+    metrics_enabled = os.getenv("METRICS_ENABLED", "true").lower() == "true"
     
     # Create agent configuration
     config = AgentConfig(
         agent_id=agent_id,
         agent_type="example",
         nats_url=nats_url,
-        heartbeat_interval=30,
-        log_level="INFO",
-        metrics_enabled=True
+        heartbeat_interval=heartbeat_interval,
+        log_level=log_level,
+        metrics_enabled=metrics_enabled
     )
     
     # Create and start agent

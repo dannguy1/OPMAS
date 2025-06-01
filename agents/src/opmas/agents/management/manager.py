@@ -1,4 +1,4 @@
-"""Agent manager implementation."""
+"""Agent manager for managing agent lifecycle and communication."""
 
 import asyncio
 import json
@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 import uuid
@@ -19,6 +19,7 @@ from .database import AgentDatabase
 from .models import Agent
 from .registry import AgentRegistry
 from .discovery import AgentDiscovery
+from opmas.core.nats import NATSClient
 
 # Configure structlog with console output
 structlog.configure(
@@ -44,118 +45,320 @@ logging.basicConfig(
 logger = structlog.get_logger(__name__)
 
 class AgentManager:
-    """Manages agent lifecycles and coordination."""
+    """Manager for agent lifecycle and communication."""
 
-    def __init__(
-        self,
-        db_url: str,
-        nats_url: str,
-        session: AsyncSession,
-        registry: AgentRegistry,
-    ) -> None:
+    def __init__(self, nats_url: str, db_session, heartbeat_timeout: int = 300):
         """Initialize the agent manager."""
-        self.db = AgentDatabase(session)
-        self.registry = registry
-        self.discovery = AgentDiscovery()
-        self.nats_client = NATS()
-        self.nats_url = nats_url
+        self._nats = NATSClient(nats_url)
+        self._discovery = AgentDiscovery()
+        self._registry = AgentRegistry(db_session)
+        self._heartbeat_timeout = heartbeat_timeout
         self._running = False
-        self._discovery_interval = 30  # seconds
-        self._heartbeat_timeout = 60  # seconds
-        self._running_agents: Dict[str, subprocess.Popen] = {}
-        logger.info("agent_manager_initialized", nats_url=nats_url)
+        self._monitor_task = None
+        logger.info(f"Initialized agent manager with heartbeat timeout: {heartbeat_timeout}s")
 
     async def start(self) -> None:
         """Start the agent manager."""
+        if self._running:
+            return
+
         try:
             # Connect to NATS
-            logger.info("connecting_to_nats", url=self.nats_url)
-            await self.nats_client.connect(self.nats_url)
-            logger.info("connected_to_nats")
+            await self._nats.connect()
+            logger.info("Connected to NATS server")
 
-            # Start agent registry and discovery
-            await self.registry.start()
-            await self.discovery.start()
-            logger.info("started_agent_registry_and_discovery")
+            # Start discovery and registry
+            await self._discovery.start()
+            await self._registry.start()
+            logger.info("Started discovery and registry services")
 
-            # Subscribe to agent events
-            logger.info("subscribing_to_nats_topics")
-            
-            # Subscribe to discovery broadcast
-            await self.nats_client.subscribe(
-                "agent.discovery",
-                cb=self._handle_discovery_request
-            )
-            logger.info("subscribed_to_discovery")
+            # Load registered agents from database
+            agents = await self._registry.get_all_agents()
+            logger.info(f"Loaded {len(agents)} agents from database")
 
-            # Subscribe to discovery responses
-            await self.nats_client.subscribe(
-                "agent.discovery.response",
-                cb=self._handle_discovery_response
-            )
-            logger.info("subscribed_to_discovery_response")
+            # Discover agents
+            discovered_agents = await self._discovery.discover_agents()
+            logger.info(f"Discovered {len(discovered_agents)} agents")
 
-            # Subscribe to heartbeats
-            await self.nats_client.subscribe(
-                "agent.heartbeat",
-                cb=self._handle_heartbeat
-            )
-            logger.info("subscribed_to_heartbeats")
+            # Register newly discovered agents
+            for agent_data in discovered_agents:
+                try:
+                    agent = await self._registry.register_agent(agent_data)
+                    if agent:
+                        logger.info(f"Registered agent: {agent.name} ({agent.agent_type})")
+                    else:
+                        logger.error(f"Failed to register agent: {agent_data.get('name')}")
+                except Exception as e:
+                    logger.error(f"Error registering agent {agent_data.get('name')}: {e}")
 
-            # Subscribe to status updates
-            await self.nats_client.subscribe(
-                "agent.status",
-                cb=self._handle_status_update
-            )
-            logger.info("subscribed_to_status_updates")
+            # Remove agents that are no longer present
+            for agent in agents:
+                agent_path = agent.agent_metadata.get('path')
+                if agent_path and not any(a.get('path') == agent_path for a in discovered_agents):
+                    logger.info(f"Agent {agent.name} not found in discovery, removing...")
+                    if await self._registry.remove_agent(agent.id):
+                        logger.info(f"Successfully removed agent {agent.name}")
+                    else:
+                        logger.error(f"Failed to remove agent {agent.name}")
+
+            # Start monitoring task
+            self._monitor_task = asyncio.create_task(self._monitor_agents())
+            logger.info("Started agent monitoring task")
+
+            # Subscribe to agent heartbeats
+            await self._nats.subscribe("agent.heartbeat", self._handle_heartbeat)
+            logger.info("Subscribed to agent heartbeats")
 
             self._running = True
+            logger.info("Agent manager started successfully")
 
-            # Start background tasks
-            asyncio.create_task(self._health_check_loop())
-            asyncio.create_task(self._monitor_agents())
-
-            logger.info("agent_manager_started")
         except Exception as e:
-            logger.error("failed_to_start_agent_manager", error=str(e))
+            logger.error(f"Error starting agent manager: {e}")
+            await self.stop()
             raise
 
     async def stop(self) -> None:
         """Stop the agent manager."""
-        if self._running:
-            # Stop all running agents
-            for agent_id, process in self._running_agents.items():
-                await self.stop_agent(agent_id)
-            
-            await self.nats_client.close()
-            await self.registry.stop()
+        if not self._running:
+            return
+
+        try:
+            # Stop monitoring task
+            if self._monitor_task:
+                self._monitor_task.cancel()
+                try:
+                    await self._monitor_task
+                except asyncio.CancelledError:
+                    pass
+                self._monitor_task = None
+
+            # Stop discovery and registry
+            await self._discovery.stop()
+            await self._registry.stop()
+
+            # Disconnect from NATS
+            await self._nats.disconnect()
+
             self._running = False
-            logger.info("agent_manager_stopped")
+            logger.info("Agent manager stopped successfully")
+
+        except Exception as e:
+            logger.error(f"Error stopping agent manager: {e}")
+            raise
 
     async def _monitor_agents(self) -> None:
-        """Monitor running agent processes."""
+        """Monitor agent health and status."""
         while self._running:
             try:
-                for agent_id, process in list(self._running_agents.items()):
-                    if process.poll() is not None:
-                        # Process has terminated
-                        logger.warning(
-                            "agent_process_terminated",
-                            agent_id=agent_id,
-                            return_code=process.returncode
-                        )
-                        await self._handle_agent_termination(agent_id, process.returncode)
-                        del self._running_agents[agent_id]
+                agents = await self._registry.get_all_agents()
+                now = datetime.utcnow()
+
+                for agent in agents:
+                    last_heartbeat = self._registry.get_agent_heartbeat(agent.id)
+                    if last_heartbeat:
+                        time_since_heartbeat = (now - last_heartbeat).total_seconds()
+                        if time_since_heartbeat > self._heartbeat_timeout:
+                            logger.warning(
+                                f"Agent {agent.name} heartbeat timeout: "
+                                f"{time_since_heartbeat:.1f}s since last heartbeat"
+                            )
+                            await self._registry.update_status(agent.id, "inactive")
+                    else:
+                        logger.warning(f"Agent {agent.name} has no heartbeat record")
+                        await self._registry.update_status(agent.id, "inactive")
+
+                await asyncio.sleep(60)  # Check every minute
+
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                logger.error("agent_monitoring_error", error=str(e))
+                logger.error(f"Error in agent monitoring: {e}")
+                await asyncio.sleep(60)  # Wait before retrying
+
+    async def _handle_heartbeat(self, msg) -> None:
+        """Handle agent heartbeat messages."""
+        try:
+            data = msg.data.decode()
+            agent_id = data.get('agent_id')
+            if agent_id:
+                if await self._registry.update_heartbeat(agent_id):
+                    logger.debug(f"Updated heartbeat for agent {agent_id}")
+                else:
+                    logger.warning(f"Received heartbeat for unknown agent {agent_id}")
+        except Exception as e:
+            logger.error(f"Error handling heartbeat: {e}")
+
+    async def get_agent(self, agent_id: str) -> Optional[Agent]:
+        """Get an agent by ID."""
+        return await self._registry.get_agent(agent_id)
+
+    async def get_all_agents(self) -> List[Agent]:
+        """Get all registered agents."""
+        return await self._registry.get_all_agents()
+
+    async def update_agent_status(self, agent_id: str, status: str) -> bool:
+        """Update an agent's status."""
+        return await self._registry.update_status(agent_id, status)
+
+    async def remove_agent(self, agent_id: str) -> bool:
+        """Remove an agent from the registry."""
+        return await self._registry.remove_agent(agent_id)
+
+    async def _run_discovery(self) -> None:
+        """Run agent discovery and process results."""
+        try:
+            agents = await self._discovery.discover_agents()
+            logger.info(f"Discovered {len(agents)} agents during discovery")
             
-            await asyncio.sleep(1)
+            for agent in agents:
+                logger.info(f"Processing agent: {agent}")
+                registered_agent = await self._registry.register_agent(agent)
+                if registered_agent:
+                    logger.info(f"Registered agent: {registered_agent.name} ({registered_agent.agent_type})")
+                    
+                    if registered_agent.status == 'active':
+                        logger.info(f"Auto-launching discovered agent: {registered_agent.name}")
+                        try:
+                            await self.start_agent(str(registered_agent.id))
+                            logger.info(f"Successfully launched agent: {registered_agent.name}")
+                        except Exception as e:
+                            logger.error(f"Failed to launch agent {registered_agent.name}: {e}")
+                    else:
+                        logger.info(f"Skipping launch of agent {registered_agent.name} - status is {registered_agent.status}")
+        except Exception as e:
+            logger.error(f"Error during discovery: {e}")
+
+    async def _handle_discovery(self, msg) -> None:
+        """Handle agent discovery request."""
+        await self._run_discovery()
+
+    async def _handle_command(self, msg) -> None:
+        """Handle agent command."""
+        try:
+            data = json.loads(msg.data.decode())
+            command = data.get("command")
+            agent_id = data.get("agent_id")
+
+            if not command or not agent_id:
+                return
+
+            if command == "start":
+                await self.start_agent(agent_id)
+            elif command == "stop":
+                await self.stop_agent(agent_id)
+            elif command == "restart":
+                await self.stop_agent(agent_id)
+                await self.start_agent(agent_id)
+        except Exception as e:
+            logger.error(f"Error handling command: {e}")
+
+    async def start_agent(self, agent_id: str) -> None:
+        """Start an agent."""
+        try:
+            agent = await self._registry.get_agent(agent_id)
+            if not agent:
+                logger.error(f"Agent {agent_id} not found")
+                return
+
+            if agent_id in self._running_agents:
+                logger.warning(f"Agent {agent_id} already running")
+                return
+
+            # Get agent script path from metadata
+            agent_path = agent.agent_metadata.get('path')
+            if not agent_path:
+                logger.error(f"Agent {agent_id} has no path in metadata")
+                return
+
+            agent_dir = Path(agent_path).resolve()  # Convert to absolute path
+            agent_script = agent_dir / "run.py"
+            
+            if not agent_script.exists():
+                logger.error(f"Agent script not found: {agent_script}")
+                return
+
+            # Prepare environment
+            env = os.environ.copy()
+            env.update({
+                "AGENT_ID": str(agent.id),
+                "NATS_URL": self._nats_url,
+                "AGENT_TYPE": agent.agent_type,
+                "AGENT_NAME": agent.name,
+                "PYTHONPATH": f"{agent_dir.parent.parent.parent}:{agent_dir.parent.parent}:{agent_dir.parent}"
+            })
+
+            # Start process
+            process = subprocess.Popen(
+                [sys.executable, str(agent_script)],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,  # Use text mode for easier reading
+                cwd=str(agent_dir),  # Set working directory to agent directory
+                bufsize=1,  # Line buffered
+                universal_newlines=True  # Use universal newlines
+            )
+            
+            # Start background tasks to read output
+            async def read_output(stream, prefix):
+                while True:
+                    line = stream.readline()
+                    if not line:
+                        break
+                    line = line.strip()
+                    if line:
+                        if prefix == "ERROR":
+                            logger.error(f"Agent {agent_id} {prefix}: {line}")
+                        else:
+                            logger.info(f"Agent {agent_id} {prefix}: {line}")
+
+            # Create tasks to read stdout and stderr
+            stdout_task = asyncio.create_task(read_output(process.stdout, "OUTPUT"))
+            stderr_task = asyncio.create_task(read_output(process.stderr, "ERROR"))
+            
+            # Wait a bit to see if process starts successfully
+            try:
+                await asyncio.sleep(2)
+                if process.poll() is not None:
+                    logger.error(f"Agent {agent_id} failed to start (exit code: {process.returncode})")
+                    await self._registry.update_status(agent_id, "error")
+                    return
+            except Exception as e:
+                logger.error(f"Error checking agent {agent_id} startup: {e}")
+                await self._registry.update_status(agent_id, "error")
+                return
+            
+            self._running_agents[agent_id] = process
+            await self._registry.update_status(agent_id, "running")
+            logger.info(f"Started agent: {agent.name} ({agent.agent_type})")
+
+        except Exception as e:
+            logger.error(f"Error starting agent {agent_id}: {e}")
+            await self._registry.update_status(agent_id, "error")
+
+    async def stop_agent(self, agent_id: str) -> None:
+        """Stop an agent."""
+        try:
+            process = self._running_agents.get(agent_id)
+            if process:
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+                
+                del self._running_agents[agent_id]
+                await self._registry.update_status(agent_id, "stopped")
+                logger.info(f"Stopped agent: {agent_id}")
+
+        except Exception as e:
+            logger.error(f"Error stopping agent {agent_id}: {e}")
 
     async def _handle_agent_termination(self, agent_id: str, return_code: int) -> None:
         """Handle agent process termination."""
         try:
-            # Update agent status
-            await self.db.update_agent_status(
+            await self._registry.update_status(
                 agent_id,
                 "error" if return_code != 0 else "stopped",
                 {
@@ -163,309 +366,7 @@ class AgentManager:
                     "terminated_at": datetime.utcnow().isoformat()
                 }
             )
-            
-            # Unregister agent
-            self.registry.unregister_agent(agent_id)
-            
-            logger.info(
-                "agent_terminated",
-                agent_id=agent_id,
-                return_code=return_code
-            )
+            self._registry.unregister_agent(agent_id)
+            logger.info(f"Agent {agent_id} terminated with code {return_code}")
         except Exception as e:
-            logger.error(
-                "agent_termination_error",
-                agent_id=agent_id,
-                error=str(e)
-            )
-
-    async def _health_check_loop(self) -> None:
-        """Periodically check agent health."""
-        while self._running:
-            try:
-                agents = await self.db.get_all_agents()
-                for agent in agents:
-                    if agent.last_heartbeat:
-                        time_since_heartbeat = (
-                            datetime.utcnow() - agent.last_heartbeat
-                        ).total_seconds()
-                        
-                        if time_since_heartbeat > self._heartbeat_timeout:
-                            # Mark agent as inactive
-                            await self.db.update_agent(
-                                agent.id,
-                                {
-                                    "status": "inactive",
-                                    "agent_metadata": {
-                                        "last_seen": agent.last_heartbeat.isoformat()
-                                    }
-                                }
-                            )
-                            logger.warning(
-                                "agent_heartbeat_timeout",
-                                agent_id=agent.id,
-                                time_since_heartbeat=time_since_heartbeat
-                            )
-            except Exception as e:
-                logger.error("health_check_error", error=str(e))
-            
-            await asyncio.sleep(self._discovery_interval)
-
-    async def _handle_discovery_request(self, msg) -> None:
-        """Handle discovery request from management API."""
-        print("DEBUG: Discovery request received!")  # Direct print for immediate feedback
-        try:
-            logger.info("Raw discovery message received", data=msg.data.decode())
-            request = json.loads(msg.data.decode())
-            logger.info(
-                "received_discovery_request",
-                request=request,
-                timestamp=datetime.utcnow().isoformat(),
-                subject=msg.subject
-            )
-            
-            # Scan for new agents using AgentDiscovery
-            logger.info("Scanning for new agents...")
-            agents = await self.discovery.discover_agents()
-            logger.info(
-                "discovered_agents",
-                count=len(agents),
-                agents=[agent["type"] for agent in agents]
-            )
-
-            # Register and launch new agents
-            for agent in agents:
-                try:
-                    # Check if agent is already registered by querying all agents
-                    all_agents = await self.db.get_all_agents()
-                    existing_agent = next(
-                        (a for a in all_agents if a.agent_type == agent["type"]),
-                        None
-                    )
-                    
-                    if not existing_agent:
-                        # Register new agent
-                        agent_id = str(uuid.uuid4())
-                        new_agent = Agent(
-                            id=agent_id,
-                            name=agent.get("name", f"{agent['type']}-{agent_id[:8]}"),
-                            agent_type=agent["type"],
-                            version=agent.get("version", "1.0.0"),
-                            status="inactive",
-                            enabled="true",
-                            config=agent.get("config", {}),
-                            agent_metadata=agent,
-                            capabilities=agent.get("capabilities", []),
-                            created_at=datetime.utcnow(),
-                            updated_at=datetime.utcnow()
-                        )
-                        await self.db.create_agent(new_agent)
-                        logger.info("Registered new agent: %s", agent_id)
-
-                        # Launch the agent
-                        success = await self.launch_agent(agent_id)
-                        if success:
-                            logger.info("Launched new agent: %s", agent_id)
-                        else:
-                            logger.error("Failed to launch agent: %s", agent_id)
-                    else:
-                        logger.info("Agent already registered: %s", existing_agent.id)
-                except Exception as e:
-                    logger.error("Error processing agent %s: %s", agent["type"], str(e))
-
-            logger.info("Discovery and agent launch process complete")
-        except Exception as e:
-            logger.error("discovery_request_error", error=str(e), exc_info=True)
-            print(f"ERROR: {str(e)}")  # Direct print for immediate feedback
-
-    async def _handle_discovery_response(self, msg) -> None:
-        """Handle agent discovery response."""
-        try:
-            response = json.loads(msg.data.decode())
-            agent_id = response.get("agent_id")
-            agent_type = response.get("agent_type")
-            
-            if not agent_id or not agent_type:
-                logger.warning("invalid_discovery_response", response=response)
-                return
-
-            # Register or update agent
-            agent = await self.db.get_agent(agent_id)
-            if agent:
-                # Update existing agent
-                await self.db.update_agent(
-                    agent_id,
-                    {
-                        "status": "active",
-                        "last_heartbeat": datetime.utcnow(),
-                        "agent_metadata": response
-                    }
-                )
-            else:
-                # Register new agent
-                await self.db.create_agent(
-                    Agent(
-                        id=agent_id,
-                        name=f"{agent_type}-{agent_id}",
-                        agent_type=agent_type,
-                        version="1.0.0",  # Default version
-                        status="active",
-                        enabled="true",
-                        config={},
-                        agent_metadata=response,
-                        capabilities=[],
-                        last_heartbeat=datetime.utcnow(),
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                )
-            
-            logger.info(
-                "agent_registered",
-                agent_id=agent_id,
-                agent_type=agent_type
-            )
-        except Exception as e:
-            logger.error("discovery_response_error", error=str(e))
-
-    async def _handle_heartbeat(self, msg) -> None:
-        """Handle agent heartbeat."""
-        try:
-            heartbeat = json.loads(msg.data.decode())
-            agent_id = heartbeat.get("agent_id")
-            
-            if not agent_id:
-                logger.warning("invalid_heartbeat", heartbeat=heartbeat)
-                return
-
-            # Update agent heartbeat
-            await self.db.update_agent(
-                agent_id,
-                {
-                    "last_heartbeat": datetime.utcnow(),
-                    "status": "active"
-                }
-            )
-            logger.debug(
-                "heartbeat_received",
-                agent_id=agent_id
-            )
-        except Exception as e:
-            logger.error("heartbeat_error", error=str(e))
-
-    async def _handle_status_update(self, msg) -> None:
-        """Handle agent status update."""
-        try:
-            status = json.loads(msg.data.decode())
-            agent_id = status.get("agent_id")
-            new_status = status.get("status")
-            
-            if not agent_id or not new_status:
-                logger.warning("invalid_status_update", status=status)
-                return
-
-            # Update agent status
-            await self.db.update_agent_status(
-                agent_id,
-                new_status,
-                status.get("metadata", {})
-            )
-            logger.info(
-                "agent_status_updated",
-                agent_id=agent_id,
-                status=new_status
-            )
-        except Exception as e:
-            logger.error("status_update_error", error=str(e))
-
-    async def launch_agent(self, agent_id: str) -> bool:
-        """Launch an agent."""
-        try:
-            agent = await self.db.get_agent(agent_id)
-            if not agent:
-                logger.error("agent_not_found", agent_id=agent_id)
-                return False
-
-            if agent_id in self._running_agents:
-                logger.warning("agent_already_running", agent_id=agent_id)
-                return False
-
-            # Prepare environment variables
-            env = os.environ.copy()
-            env.update({
-                "AGENT_ID": str(agent.id),
-                "NATS_URL": self.nats_url,
-                "AGENT_TYPE": agent.agent_type,
-                "AGENT_NAME": agent.name,
-                "AGENT_VERSION": agent.version
-            })
-
-            # Determine agent script path
-            agent_script = Path(__file__).parent.parent.parent / "packages" / agent.agent_type / "run_agent.py"
-            if not agent_script.exists():
-                logger.error("agent_script_not_found", script=str(agent_script))
-                return False
-
-            # Start agent process
-            process = subprocess.Popen(
-                [sys.executable, str(agent_script)],
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            
-            self._running_agents[agent_id] = process
-            
-            # Update agent status
-            await self.db.update_agent_status(
-                agent_id,
-                "starting",
-                {"started_at": datetime.utcnow().isoformat()}
-            )
-            
-            logger.info("agent_launched", agent_id=agent_id)
-            return True
-        except Exception as e:
-            logger.error("agent_launch_error", error=str(e))
-            return False
-
-    async def stop_agent(self, agent_id: str) -> bool:
-        """Stop an agent."""
-        try:
-            agent = await self.db.get_agent(agent_id)
-            if not agent:
-                logger.error("agent_not_found", agent_id=agent_id)
-                return False
-
-            process = self._running_agents.get(agent_id)
-            if not process:
-                logger.warning("agent_not_running", agent_id=agent_id)
-                return False
-
-            # Send stop signal
-            process.terminate()
-            
-            # Wait for graceful shutdown
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                # Force kill if graceful shutdown fails
-                process.kill()
-                process.wait()
-            
-            # Update agent status
-            await self.db.update_agent_status(
-                agent_id,
-                "stopped",
-                {"stopped_at": datetime.utcnow().isoformat()}
-            )
-            
-            # Clean up
-            del self._running_agents[agent_id]
-            self.registry.unregister_agent(agent_id)
-            
-            logger.info("agent_stopped", agent_id=agent_id)
-            return True
-        except Exception as e:
-            logger.error("agent_stop_error", error=str(e))
-            return False 
+            logger.error(f"Error handling agent termination: {e}") 

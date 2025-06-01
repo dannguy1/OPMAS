@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  agent:
+    build:
+      context: ../../..
+      dockerfile: agents/example_agent/Dockerfile
+    environment:
+      - MANAGEMENT_API_URL=http://management-api:8000
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - management-api
+      - nats
+    volumes:
+      - /proc:/host/proc:ro  # For system metrics
+      - /sys:/host/sys:ro    # For system metrics
+      - /:/host/root:ro      # For disk metrics
+
+  management-api:
+    image: opmas/management-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=opmas
+      - JWT_SECRET=your-secret-key
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - postgres
+      - nats
+
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=opmas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  nats:
+    image: nats:2.9
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+volumes:
+  postgres_data: 

@@ -2,10 +2,8 @@
 
 from datetime import datetime
 from typing import Dict, List, Optional
-from uuid import UUID
 
 from sqlalchemy import Column, DateTime, String, JSON
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -15,7 +13,7 @@ class Agent(Base):
 
     __tablename__ = "agent_instances"
 
-    id = Column(PGUUID, primary_key=True)
+    id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
     agent_type = Column(String, nullable=False)
     version = Column(String, nullable=False)

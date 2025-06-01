@@ -2,6 +2,7 @@
 from datetime import datetime
 import json
 from typing import Any, Dict, Optional
+import asyncio
 
 import structlog
 from nats.aio.client import Client as NATS
@@ -52,6 +53,10 @@ class BaseAgent:
             self._running = True
             self._start_time = datetime.utcnow()
             self._last_heartbeat = self._start_time
+            
+            # Start heartbeat task
+            asyncio.create_task(self._heartbeat_loop())
+            
             logger.info(
                 "agent_started",
                 agent_id=self.config.agent_id,
@@ -65,6 +70,33 @@ class BaseAgent:
                 agent_type=self.config.agent_type
             )
             raise AgentError(f"Failed to start agent: {str(e)}") from e
+
+    async def _heartbeat_loop(self) -> None:
+        """Send periodic heartbeats to NATS."""
+        while self._running:
+            try:
+                await self.update_heartbeat()
+                await self.nats_client.publish(
+                    "agent.heartbeat",
+                    json.dumps({
+                        "agent_id": self.config.agent_id,
+                        "agent_type": self.config.agent_type,
+                        "timestamp": self._last_heartbeat.isoformat(),
+                        "status": "healthy"
+                    }).encode()
+                )
+                logger.debug(
+                    "heartbeat_sent",
+                    agent_id=self.config.agent_id,
+                    timestamp=self._last_heartbeat.isoformat()
+                )
+            except Exception as e:
+                logger.error(
+                    "heartbeat_error",
+                    error=str(e),
+                    agent_id=self.config.agent_id
+                )
+            await asyncio.sleep(self.config.heartbeat_interval)
 
     async def _handle_discovery_request(self, msg) -> None:
         """Handle agent discovery request."""
